@@ -39,6 +39,11 @@ func (r *UpdateTagValueRule) CheckMode(check bool) {
 	r.check = check
 }
 
+// Flags implements Rule interface
+func (r *UpdateTagValueRule) Flags() int {
+	return Standard
+}
+
 // WithLogger sets the logger on the rule
 func (r *UpdateTagValueRule) WithLogger(logger *log.Logger) {
 	r.logger = logger

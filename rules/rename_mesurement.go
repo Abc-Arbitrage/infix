@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 	"log"
-	"regexp"
 
 	"github.com/oktal/infix/logging"
 
@@ -18,7 +17,7 @@ type RenameFn func(string) string
 
 // RenameMeasurementRule represents a rule to rename a measurement
 type RenameMeasurementRule struct {
-	pattern *regexp.Regexp
+	filter Filter
 
 	renameFn RenameFn
 	renamed  map[string]string
@@ -33,14 +32,20 @@ func NewRenameMeasurement(srcName string, dstName string) *RenameMeasurementRule
 	renameFn := func(measurement string) string {
 		return dstName
 	}
-	return NewRenameMeasurementWithPattern(srcName, renameFn)
+	filter := NewIncludeFilter([]string{srcName})
+	return NewRenameMeasurementWithFilter(filter, renameFn)
 }
 
 // NewRenameMeasurementWithPattern creates a new RenameMeasurementRule to rename measurements that match the given pattern
 func NewRenameMeasurementWithPattern(pattern string, renameFn RenameFn) *RenameMeasurementRule {
-	r := regexp.MustCompile(pattern)
+	filter := NewPatternFilter(pattern)
+	return NewRenameMeasurementWithFilter(filter, renameFn)
+}
+
+// NewRenameMeasurementWithFilter creates a new RenameMeasurementRule to rename measurements that uses the given filter
+func NewRenameMeasurementWithFilter(filter Filter, renameFn RenameFn) *RenameMeasurementRule {
 	return &RenameMeasurementRule{
-		pattern:  r,
+		filter:   filter,
 		renameFn: renameFn,
 		renamed:  make(map[string]string),
 		check:    false,
@@ -51,6 +56,11 @@ func NewRenameMeasurementWithPattern(pattern string, renameFn RenameFn) *RenameM
 // CheckMode sets the check mode on the rule
 func (r *RenameMeasurementRule) CheckMode(check bool) {
 	r.check = check
+}
+
+// Flags implements Rule interface
+func (r *RenameMeasurementRule) Flags() int {
+	return Standard
 }
 
 // WithLogger sets the logger on the rule
@@ -122,7 +132,7 @@ func (r *RenameMeasurementRule) Apply(key []byte, values []tsm1.Value) ([]byte, 
 	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
 	measurement, tags := models.ParseKey(seriesKey)
 
-	if r.pattern.Match([]byte(measurement)) {
+	if r.filter.Filter([]byte(measurement)) {
 		newName := r.renameFn(measurement)
 		r.logger.Printf("Renaming '%s' to '%s'", measurement, newName)
 		newSeriesKey := models.MakeKey([]byte(newName), tags)

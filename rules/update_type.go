@@ -44,6 +44,11 @@ func (r *UpdateMeasurementFieldTypeRule) CheckMode(check bool) {
 	r.check = check
 }
 
+// Flags implements Rule interface
+func (r *UpdateMeasurementFieldTypeRule) Flags() int {
+	return Standard
+}
+
 // WithLogger sets the logger on the rule
 func (r *UpdateMeasurementFieldTypeRule) WithLogger(logger *log.Logger) {
 	r.logger = logger

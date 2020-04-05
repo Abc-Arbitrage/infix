@@ -28,6 +28,14 @@ type PatternFilter struct {
 	pattern *regexp.Regexp
 }
 
+// NewPatternFilter creates a new PatternFilter with the given pattern
+func NewPatternFilter(pattern string) *PatternFilter {
+	r := regexp.MustCompile(pattern)
+	return &PatternFilter{
+		pattern: r,
+	}
+}
+
 // Filter implements the Filter interface
 func (f *PatternFilter) Filter(key []byte) bool {
 	return f.pattern.Match(key)
@@ -36,6 +44,13 @@ func (f *PatternFilter) Filter(key []byte) bool {
 // IncludeFilter defines a filter to only include a list of strings
 type IncludeFilter struct {
 	includes []string
+}
+
+// NewIncludeFilter creates a new IncludeFilter
+func NewIncludeFilter(includes []string) *IncludeFilter {
+	return &IncludeFilter{
+		includes: includes,
+	}
 }
 
 // Filter implements the Filter interface
@@ -53,6 +68,13 @@ func (f *IncludeFilter) Filter(key []byte) bool {
 // ExcludeFilter defines a filter to exclude a list of strings
 type ExcludeFilter struct {
 	excludes []string
+}
+
+// NewExcludeFilter creates a new ExcludeFilter
+func NewExcludeFilter(excludes []string) *ExcludeFilter {
+	return &ExcludeFilter{
+		excludes: excludes,
+	}
 }
 
 // Filter implements the Filter interface

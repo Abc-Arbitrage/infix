@@ -35,16 +35,24 @@ type Command struct {
 
 	shards []storage.ShardInfo
 
-	rules []rules.Rule
+	filter rules.Filter
+	rules  []rules.Rule
 }
 
 // NewCommand returns a new instance of Command.
-func NewCommand(rules rules.Set) *Command {
+func NewCommand(rs rules.Set) *Command {
+
 	return &Command{
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
-		rules:  rules.Rules(),
+		rules:  rs.Rules(),
+		filter: &rules.AlwaysTrueFilter{},
 	}
+}
+
+// GlobalFilter sets the filter to apply globaly for all rules
+func (cmd *Command) GlobalFilter(filter rules.Filter) {
+	cmd.filter = filter
 }
 
 // Run executes the command.
@@ -193,9 +201,15 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 	}
 
 	log.Printf("%d total keys", r.KeyCount())
+	filtered := 0
 
 	for i := 0; i < r.KeyCount(); i++ {
 		key, _ := r.KeyAt(i)
+		if cmd.filter.Filter(key) {
+			filtered++
+			continue
+		}
+
 		values, err := r.ReadAll(key)
 		if err != nil {
 			fmt.Fprintf(cmd.Stderr, "unable to read key %q in %s, skipping: %s\n", string(key), tsmFilePath, err.Error())
