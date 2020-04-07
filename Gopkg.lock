@@ -157,6 +157,25 @@
   revision = "90eadee771aeab36e8bf796039b8c261bebebe4f"
 
 [[projects]]
+  digest = "1:b56c589214f01a5601e0821387db484617392d0042f26234bf2da853a2f498a1"
+  name = "github.com/naoina/go-stringutil"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:f58c3d0e46b64878d00652fedba24ee879725191ab919dca7b62586859281c04"
+  name = "github.com/naoina/toml"
+  packages = [
+    ".",
+    "ast",
+  ]
+  pruneopts = "UT"
+  revision = "e6f5723bf2a66af014955e0888881314cf294129"
+  version = "v0.1.1"
+
+[[projects]]
   digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
   name = "github.com/philhofer/fwd"
   packages = ["."]
@@ -277,6 +296,7 @@
     "github.com/influxdata/influxdb/tsdb",
     "github.com/influxdata/influxdb/tsdb/engine/tsm1",
     "github.com/influxdata/influxql",
+    "github.com/naoina/toml",
     "github.com/stretchr/testify/assert",
   ]
   solver-name = "gps-cdcl"

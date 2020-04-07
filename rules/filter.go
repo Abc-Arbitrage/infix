@@ -1,10 +1,20 @@
 package rules
 
-import "regexp"
+import (
+	"regexp"
+
+	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+)
 
 // Filter defines an interface to filter and skip keys when applying rules
 type Filter interface {
 	Filter(key []byte) bool
+}
+
+// TagsFilter defines an interface to filter tags
+type TagsFilter interface {
+	Filter(tags models.Tags) bool
 }
 
 // FilterSet defines a set of filters that must pass
@@ -25,20 +35,26 @@ func (f *FilterSet) Filter(key []byte) bool {
 
 // PatternFilter is a Filter based on regexp
 type PatternFilter struct {
-	pattern *regexp.Regexp
+	Pattern *regexp.Regexp
 }
 
 // NewPatternFilter creates a new PatternFilter with the given pattern
-func NewPatternFilter(pattern string) *PatternFilter {
-	r := regexp.MustCompile(pattern)
-	return &PatternFilter{
-		pattern: r,
+func NewPatternFilter(pattern string) (*PatternFilter, error) {
+	r, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
 	}
+
+	pf := &PatternFilter{
+		Pattern: r,
+	}
+
+	return pf, nil
 }
 
 // Filter implements the Filter interface
 func (f *PatternFilter) Filter(key []byte) bool {
-	return f.pattern.Match(key)
+	return f.Pattern.Match(key)
 }
 
 // IncludeFilter defines a filter to only include a list of strings
@@ -89,11 +105,62 @@ func (f *ExcludeFilter) Filter(key []byte) bool {
 	return true
 }
 
-// AlwaysTrueFilter is a Filter that always returns true
-type AlwaysTrueFilter struct {
+// PassFilter is a Filter that always pass
+type PassFilter struct {
 }
 
 // Filter implements Filter interface
-func (f *AlwaysTrueFilter) Filter(key []byte) bool {
-	return true
+func (f *PassFilter) Filter(key []byte) bool {
+	return false
+}
+
+// MeasurementFilter defines a filter restricted to measurement part of a key
+type MeasurementFilter struct {
+	filter Filter
+}
+
+// NewMeasurementFilter creates a new MeasurementFilter
+func NewMeasurementFilter(filter Filter) *MeasurementFilter {
+	return &MeasurementFilter{
+		filter: filter,
+	}
+}
+
+// Filter implements Filter interface
+func (f *MeasurementFilter) Filter(key []byte) bool {
+	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+	measurement, _ := models.ParseKeyBytes(seriesKey)
+
+	return f.filter.Filter(measurement)
+}
+
+// SerieFilter defines a filter restricted to the serie part of a key
+type SerieFilter struct {
+	measurementFilter Filter
+	tagsFilter        TagsFilter
+}
+
+// Filter implements Filter interface
+func (f *SerieFilter) Filter(key []byte) bool {
+	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+	measurement, tags := models.ParseKeyBytes(seriesKey)
+
+	return f.measurementFilter.Filter(measurement) && f.tagsFilter.Filter(tags)
+}
+
+// SerieFieldFilter defines a filter based on (measurement, tags, field) components of a key
+type SerieFieldFilter struct {
+	measurementFilter Filter
+	tagsFilter        TagsFilter
+	fieldFilter       Filter
+}
+
+// Filter implements Filter interface
+func (f *SerieFieldFilter) Filter(key []byte) bool {
+	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
+	measurement, tags := models.ParseKeyBytes(seriesKey)
+
+	return f.measurementFilter.Filter(measurement) &&
+		f.tagsFilter.Filter(tags) &&
+		f.fieldFilter.Filter(field)
 }

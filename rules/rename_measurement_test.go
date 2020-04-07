@@ -31,16 +31,18 @@ func TestRenameMeasurement_ShouldApplyAndRename(t *testing.T) {
 
 	for _, d := range data {
 		newKey, values, err := rule.Apply([]byte(d.key), d.values)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, len(d.values), len(values))
 		assert.Equal(t, newKey, d.newKey)
 	}
 }
 
 func TestRenameMeasurement_ShouldApplyAndRenameWithPattern(t *testing.T) {
-	rule := NewRenameMeasurementWithPattern("^(cpu|disk)$", func(measurement string) string {
+	rule, err := NewRenameMeasurementWithPattern("^(cpu|disk)$", func(measurement string) string {
 		return "linux." + measurement
 	})
+
+	assert.NoError(t, err)
 
 	var tags = map[string]string{
 		"host": "my-host",
@@ -57,16 +59,17 @@ func TestRenameMeasurement_ShouldApplyAndRenameWithPattern(t *testing.T) {
 
 	for _, d := range data {
 		newKey, values, err := rule.Apply([]byte(d.key), d.values)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, len(d.values), len(values))
 		assert.Equal(t, newKey, d.newKey)
 	}
 }
 
 func TestRenameMeasurement_ShouldUpdateFieldsIndex(t *testing.T) {
-	rule := NewRenameMeasurementWithPattern("^(cpu|disk)$", func(measurement string) string {
+	rule, err := NewRenameMeasurementWithPattern("^(cpu|disk)$", func(measurement string) string {
 		return "linux." + measurement
 	})
+	assert.NoError(t, err)
 	rule.CheckMode(true)
 
 	measurements := []measurementFields{
@@ -101,13 +104,13 @@ func TestRenameMeasurement_ShouldUpdateFieldsIndex(t *testing.T) {
 
 	for _, d := range data {
 		_, _, err := rule.Apply([]byte(d.key), d.values)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 
 	assert.Equal(t, rule.Count(), 2)
 
-	err := rule.EndShard()
-	assert.Nil(t, err)
+	err = rule.EndShard()
+	assert.NoError(t, err)
 
 	for _, d := range data {
 		oldMeasurement, _ := models.ParseKey(d.key)

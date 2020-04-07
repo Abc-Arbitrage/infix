@@ -49,6 +49,16 @@ func (r *UpdateTagValueRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
 }
 
+// Start implements Rule interface
+func (r *UpdateTagValueRule) Start() {
+
+}
+
+// End implements Rule interface
+func (r *UpdateTagValueRule) End() {
+
+}
+
 // StartShard implements Rule interface
 func (r *UpdateTagValueRule) StartShard(info storage.ShardInfo) {
 }

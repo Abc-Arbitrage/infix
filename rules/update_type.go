@@ -54,6 +54,16 @@ func (r *UpdateMeasurementFieldTypeRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
 }
 
+// Start implements Rule interface
+func (r *UpdateMeasurementFieldTypeRule) Start() {
+
+}
+
+// End implements Rule interface
+func (r *UpdateMeasurementFieldTypeRule) End() {
+
+}
+
 // StartShard implements Rule interface
 func (r *UpdateMeasurementFieldTypeRule) StartShard(info storage.ShardInfo) {
 	r.shard = info

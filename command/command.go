@@ -26,6 +26,7 @@ type Command struct {
 	Stderr io.Writer
 	Stdout io.Writer
 
+	config          string
 	dataDir         string
 	walDir          string
 	database        string
@@ -39,14 +40,23 @@ type Command struct {
 	rules  []rules.Rule
 }
 
-// NewCommand returns a new instance of Command.
-func NewCommand(rs rules.Set) *Command {
+// NewCommand returns a new instace of Command
+func NewCommand() *Command {
+	return &Command{
+		Stderr: os.Stderr,
+		Stdout: os.Stdout,
+		filter: &rules.PassFilter{},
+	}
+}
+
+// NewCommandWithRules returns a new instance of Command.
+func NewCommandWithRules(rs rules.Set) *Command {
 
 	return &Command{
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
 		rules:  rs.Rules(),
-		filter: &rules.AlwaysTrueFilter{},
+		filter: &rules.PassFilter{},
 	}
 }
 
@@ -62,6 +72,7 @@ func (cmd *Command) Run(args ...string) error {
 	fs.StringVar(&cmd.walDir, "waldir", "/var/lib/influxdb/wal", "Path to WAL storage")
 	fs.StringVar(&cmd.database, "database", "", "The database to enforce")
 	fs.StringVar(&cmd.retentionPolicy, "retention", "", "The retention policy to enforce")
+	fs.StringVar(&cmd.config, "config", "", "The configuration file for rules")
 	fs.BoolVar(&cmd.verbose, "v", false, "Enable verbose logging")
 	fs.BoolVar(&cmd.check, "check", false, "Run in check mode")
 
@@ -82,6 +93,21 @@ func (cmd *Command) Run(args ...string) error {
 
 	if err := cmd.validate(); err != nil {
 		return err
+	}
+
+	f, err := os.Open(cmd.config)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	rs, err := rules.LoadConfig(cmd.config)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range rs {
+		cmd.rules = append(cmd.rules, r)
 	}
 
 	shards, err := storage.LoadShards(cmd.dataDir, cmd.walDir, cmd.database, cmd.retentionPolicy)
@@ -109,7 +135,9 @@ Usage: infix [options]
     -v
             Enable verbose logging
     -check
-            Run in check mode (do not apply any change)
+			Run in check mode (do not apply any change)
+	-config
+			The configuration file
 `
 
 	fmt.Fprintf(cmd.Stdout, usage)
@@ -118,6 +146,7 @@ Usage: infix [options]
 func (cmd *Command) process(shards []storage.ShardInfo) error {
 	for _, r := range cmd.rules {
 		r.CheckMode(cmd.check)
+		r.Start()
 	}
 
 	for _, sh := range shards {
@@ -127,6 +156,10 @@ func (cmd *Command) process(shards []storage.ShardInfo) error {
 	}
 
 	logging.Flush(cmd.Stdout)
+
+	for _, r := range cmd.rules {
+		r.End()
+	}
 
 	return nil
 }
@@ -203,6 +236,9 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 	log.Printf("%d total keys", r.KeyCount())
 	filtered := 0
 
+	readRules := cmd.filterRules(rules.TSMReadOnly)
+	writeRules := cmd.filterRules(rules.TSMWriteOnly)
+
 	for i := 0; i < r.KeyCount(); i++ {
 		key, _ := r.KeyAt(i)
 		if cmd.filter.Filter(key) {
@@ -216,7 +252,14 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 			continue
 		}
 
-		for _, r := range cmd.rules {
+		for _, r := range readRules {
+			_, _, err := r.Apply(key, values)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, r := range writeRules {
 			key, values, err = r.Apply(key, values)
 			if err != nil {
 				return err
@@ -346,6 +389,9 @@ func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) e
 }
 
 func (cmd *Command) validate() error {
+	if cmd.config == "" {
+		return fmt.Errorf("must specify a configuration file")
+	}
 	if cmd.retentionPolicy != "" && cmd.database == "" {
 		return fmt.Errorf("must specify a database")
 	}
@@ -353,7 +399,11 @@ func (cmd *Command) validate() error {
 }
 
 func (cmd *Command) createRewriter(tsmFilePath string) (storage.TSMRewriter, error) {
-	if cmd.check {
+	// If all rules are read-only, just return a NoopRewriter
+	readRules := cmd.filterRules(rules.TSMReadOnly)
+	readonly := len(readRules) == len(cmd.rules)
+
+	if cmd.check || readonly {
 		return &storage.NoopTSMRewriter{}, nil
 	}
 
@@ -407,6 +457,15 @@ func (cmd *Command) createWALWriter(walFilePath string) (*tsm1.WALSegmentWriter,
 	w := tsm1.NewWALSegmentWriter(output)
 
 	return w, output, outputPath, nil
+}
+
+func (cmd *Command) filterRules(flags int) (ret []rules.Rule) {
+	for _, r := range cmd.rules {
+		if r.Flags()&flags != 0 {
+			ret = append(ret, r)
+		}
+	}
+	return
 }
 
 func encodeWALEntry(entry tsm1.WALEntry) ([]byte, error) {

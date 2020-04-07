@@ -28,6 +28,9 @@ type Rule interface {
 	CheckMode(check bool)
 	Flags() int
 
+	Start()
+	End()
+
 	StartShard(info storage.ShardInfo)
 	EndShard() error
 
