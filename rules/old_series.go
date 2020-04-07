@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,28 +13,101 @@ import (
 	"github.com/oktal/infix/storage"
 )
 
+type formater interface {
+	format(iow io.Writer, serie string, timestamp int64) error
+}
+
+type textFormater struct {
+	withTimestamp bool
+}
+
+func (f *textFormater) format(iow io.Writer, serie string, timestamp int64) error {
+	if f.withTimestamp {
+		fmt.Fprintf(iow, "%s: %d\n", serie, timestamp)
+	} else {
+		fmt.Fprintf(iow, "%s\n", serie)
+	}
+	return nil
+}
+
+type jsonFormater struct {
+	withTimestamp bool
+}
+
+func (f *jsonFormater) format(iow io.Writer, serie string, timestamp int64) error {
+	type jsonLine struct {
+		serie     string
+		timestamp int64
+	}
+	type jsonLineSerieOnly struct {
+		serie string
+	}
+
+	data := map[string]interface{}{
+		"Serie": serie,
+	}
+
+	if f.withTimestamp {
+		data["Timestamp"] = timestamp
+	}
+	return f.formatLine(iow, data)
+}
+
+func (f *jsonFormater) formatLine(iow io.Writer, data map[string]interface{}) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(iow, string(b))
+	return nil
+}
+
 // OldSeriesRule defines a read-only rule to retrieve series that are oldest than a given timestamp
 type OldSeriesRule struct {
 	filter   Filter
 	unixNano int64
 	out      io.Writer
 
-	series map[string]int64
+	series   map[string]int64
+	formater formater
 }
 
 // OldSerieRuleConfig represents the toml configuration for OldSerieRule
 type OldSerieRuleConfig struct {
-	Time string
-	Out  string
+	Time      string
+	Out       string
+	Format    string
+	Timestamp bool
+}
+
+func newFormater(format string, withTimestamp bool) (formater, error) {
+	switch format {
+	case "text":
+		return &textFormater{withTimestamp: withTimestamp}, nil
+	case "json":
+		return &jsonFormater{withTimestamp: withTimestamp}, nil
+	default:
+		return nil, fmt.Errorf("Unknown format %s", format)
+	}
 }
 
 // NewOldSeriesRule creates a new OldSeriesRule
-func NewOldSeriesRule(filter Filter, t time.Time, out io.Writer) *OldSeriesRule {
+func NewOldSeriesRule(filter Filter, t time.Time, out io.Writer, format string) (*OldSeriesRule, error) {
+	formater, err := newFormater(format, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return newOldSeriesRule(filter, t, out, formater), nil
+}
+
+func newOldSeriesRule(filter Filter, t time.Time, out io.Writer, formater formater) *OldSeriesRule {
 	return &OldSeriesRule{
 		filter:   filter,
 		unixNano: t.UnixNano() / int64(time.Nanosecond),
 		out:      out,
 		series:   make(map[string]int64),
+		formater: formater,
 	}
 }
 
@@ -67,8 +141,7 @@ func (r *OldSeriesRule) End() {
 
 	for _, key := range keys {
 		ts := r.series[key]
-		t := time.Unix(0, ts)
-		fmt.Fprintf(r.out, "%s: %s\n", key, t.String())
+		r.formater.format(r.out, key, ts)
 	}
 }
 
@@ -136,13 +209,15 @@ func (c *OldSerieRuleConfig) Sample() string {
 		time="2020-01-01 00:08:00"
 		out=stdout
 		# out=out_file.log
+		format=text
+		timestamp=true
+		# format=json
 	`
 }
 
 // Build implements Config interface
 func (c *OldSerieRuleConfig) Build() (Rule, error) {
-	layout := "2020-01-01 00:08:00"
-	t, err := time.Parse(layout, c.Time)
+	t, err := time.Parse(time.RFC3339, c.Time)
 	if err != nil {
 		return nil, err
 	}
@@ -161,5 +236,15 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 		}
 	}
 
-	return NewOldSeriesRule(&PassFilter{}, t, out), nil
+	format := "text"
+	if c.Format != "" {
+		format = c.Format
+	}
+
+	formater, err := newFormater(format, c.Timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	return newOldSeriesRule(&PassFilter{}, t, out, formater), nil
 }
