@@ -1,6 +1,8 @@
-package rules
+package filter
 
 import (
+	"bytes"
+	"io/ioutil"
 	"regexp"
 
 	"github.com/influxdata/influxdb/models"
@@ -17,13 +19,13 @@ type TagsFilter interface {
 	Filter(tags models.Tags) bool
 }
 
-// FilterSet defines a set of filters that must pass
-type FilterSet struct {
+// Set defines a set of filters that must pass
+type Set struct {
 	filters []Filter
 }
 
 // Filter implements the Filter interface
-func (f *FilterSet) Filter(key []byte) bool {
+func (f *Set) Filter(key []byte) bool {
 	for _, f := range f.filters {
 		if f.Filter(key) {
 			return true
@@ -114,6 +116,16 @@ func (f *PassFilter) Filter(key []byte) bool {
 	return false
 }
 
+// RawFilter is a filter based on raw bytes
+type RawFilter struct {
+	content []byte
+}
+
+// Filter implements Filter interface
+func (f *RawFilter) Filter(key []byte) bool {
+	return bytes.Contains(f.content, key)
+}
+
 // MeasurementFilter defines a filter restricted to measurement part of a key
 type MeasurementFilter struct {
 	filter Filter
@@ -132,6 +144,24 @@ func (f *MeasurementFilter) Filter(key []byte) bool {
 	measurement, _ := models.ParseKeyBytes(seriesKey)
 
 	return f.filter.Filter(measurement)
+}
+
+// RawSerieFilter defines a filter restricted to a serie part of a key as raw bytes
+type RawSerieFilter struct {
+	filter Filter
+}
+
+// NewRawSerieFilter creates a new RawSerieFilter
+func NewRawSerieFilter(filter Filter) *RawSerieFilter {
+	return &RawSerieFilter{
+		filter: filter,
+	}
+}
+
+// Filter implements the Filter interface
+func (f *RawSerieFilter) Filter(key []byte) bool {
+	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+	return f.filter.Filter(seriesKey)
 }
 
 // SerieFilter defines a filter restricted to the serie part of a key
@@ -163,4 +193,31 @@ func (f *SerieFieldFilter) Filter(key []byte) bool {
 	return f.measurementFilter.Filter(measurement) &&
 		f.tagsFilter.Filter(tags) &&
 		f.fieldFilter.Filter(field)
+}
+
+// FileFilterConfiguration represents the toml configuration for a filter based on file content
+type FileFilterConfiguration struct {
+	Path string
+}
+
+// Sample implements Config interface
+func (c *FileFilterConfiguration) Sample() string {
+	return `
+	[[rules.drop-serie]]
+		 [rules.drop-serie.dropFilter.file]
+		 	path="file.log"
+	`
+}
+
+// Build implements Config interface
+func (c *FileFilterConfiguration) Build() (Filter, error) {
+	content, err := ioutil.ReadFile(c.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	f := &RawFilter{
+		content: content,
+	}
+	return f, nil
 }

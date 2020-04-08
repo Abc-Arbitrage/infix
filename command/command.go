@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/logging"
 	"github.com/oktal/infix/rules"
 	"github.com/oktal/infix/storage"
@@ -36,7 +37,7 @@ type Command struct {
 
 	shards []storage.ShardInfo
 
-	filter rules.Filter
+	filter filter.Filter
 	rules  []rules.Rule
 }
 
@@ -45,7 +46,7 @@ func NewCommand() *Command {
 	return &Command{
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
-		filter: &rules.PassFilter{},
+		filter: &filter.PassFilter{},
 	}
 }
 
@@ -56,12 +57,12 @@ func NewCommandWithRules(rs rules.Set) *Command {
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
 		rules:  rs.Rules(),
-		filter: &rules.PassFilter{},
+		filter: &filter.PassFilter{},
 	}
 }
 
 // GlobalFilter sets the filter to apply globaly for all rules
-func (cmd *Command) GlobalFilter(filter rules.Filter) {
+func (cmd *Command) GlobalFilter(filter filter.Filter) {
 	cmd.filter = filter
 }
 

@@ -11,6 +11,9 @@ func init() {
 	RegisterRule("old-serie", func() Config {
 		return &OldSerieRuleConfig{}
 	})
+	RegisterRule("drop-serie", func() Config {
+		return &DropSerieRuleConfiguration{}
+	})
 }
 
 // NewRuleFunc represents a callback to register a rule's configuration to be able to load it from toml

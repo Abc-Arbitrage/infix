@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/logging"
 
 	"github.com/influxdata/influxdb/models"
@@ -17,7 +18,7 @@ type RenameFn func(string) string
 
 // RenameMeasurementRule represents a rule to rename a measurement
 type RenameMeasurementRule struct {
-	filter Filter
+	filter filter.Filter
 
 	renameFn RenameFn
 	renamed  map[string]string
@@ -38,13 +39,13 @@ func NewRenameMeasurement(srcName string, dstName string) *RenameMeasurementRule
 	renameFn := func(measurement string) string {
 		return dstName
 	}
-	filter := NewIncludeFilter([]string{srcName})
+	filter := filter.NewIncludeFilter([]string{srcName})
 	return NewRenameMeasurementWithFilter(filter, renameFn)
 }
 
 // NewRenameMeasurementWithPattern creates a new RenameMeasurementRule to rename measurements that match the given pattern
 func NewRenameMeasurementWithPattern(pattern string, renameFn RenameFn) (*RenameMeasurementRule, error) {
-	filter, err := NewPatternFilter(pattern)
+	filter, err := filter.NewPatternFilter(pattern)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func NewRenameMeasurementWithPattern(pattern string, renameFn RenameFn) (*Rename
 }
 
 // NewRenameMeasurementWithFilter creates a new RenameMeasurementRule to rename measurements that uses the given filter
-func NewRenameMeasurementWithFilter(filter Filter, renameFn RenameFn) *RenameMeasurementRule {
+func NewRenameMeasurementWithFilter(filter filter.Filter, renameFn RenameFn) *RenameMeasurementRule {
 	return &RenameMeasurementRule{
 		filter:   filter,
 		renameFn: renameFn,
@@ -179,7 +180,7 @@ func (c *RenameMeasurementConfig) Sample() string {
 
 // Build implements Config interface
 func (c *RenameMeasurementConfig) Build() (Rule, error) {
-	filter, err := NewPatternFilter(c.From)
+	filter, err := filter.NewPatternFilter(c.From)
 	if err != nil {
 		return nil, err
 	}

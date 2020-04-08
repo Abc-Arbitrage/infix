@@ -64,7 +64,6 @@ func (f *jsonFormater) formatLine(iow io.Writer, data map[string]interface{}) er
 
 // OldSeriesRule defines a read-only rule to retrieve series that are oldest than a given timestamp
 type OldSeriesRule struct {
-	filter   Filter
 	unixNano int64
 	out      io.Writer
 
@@ -92,18 +91,17 @@ func newFormater(format string, withTimestamp bool) (formater, error) {
 }
 
 // NewOldSeriesRule creates a new OldSeriesRule
-func NewOldSeriesRule(filter Filter, t time.Time, out io.Writer, format string) (*OldSeriesRule, error) {
+func NewOldSeriesRule(t time.Time, out io.Writer, format string) (*OldSeriesRule, error) {
 	formater, err := newFormater(format, false)
 	if err != nil {
 		return nil, err
 	}
 
-	return newOldSeriesRule(filter, t, out, formater), nil
+	return newOldSeriesRule(t, out, formater), nil
 }
 
-func newOldSeriesRule(filter Filter, t time.Time, out io.Writer, formater formater) *OldSeriesRule {
+func newOldSeriesRule(t time.Time, out io.Writer, formater formater) *OldSeriesRule {
 	return &OldSeriesRule{
-		filter:   filter,
 		unixNano: t.UnixNano() / int64(time.Nanosecond),
 		out:      out,
 		series:   make(map[string]int64),
@@ -177,10 +175,6 @@ func (r *OldSeriesRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *OldSeriesRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	if r.filter.Filter(key) {
-		return nil, nil, nil
-	}
-
 	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
 	maxTs := values[len(values)-1].UnixNano()
 
@@ -246,5 +240,5 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 		return nil, err
 	}
 
-	return newOldSeriesRule(&PassFilter{}, t, out, formater), nil
+	return newOldSeriesRule(t, out, formater), nil
 }
