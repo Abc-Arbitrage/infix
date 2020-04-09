@@ -7,7 +7,10 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/oktal/infix/logging"
 
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/oktal/infix/storage"
@@ -18,12 +21,26 @@ type formater interface {
 }
 
 type textFormater struct {
-	withTimestamp bool
+	withTimestamp   bool
+	timestampLayout string
+}
+
+func formatTimestamp(unixNano int64, layout string) string {
+	if layout == "" {
+		return string(unixNano)
+	}
+
+	ts := time.Unix(0, unixNano)
+	if strings.EqualFold(layout, "RFC3339") {
+		return ts.Format(time.RFC3339)
+	}
+
+	return ts.Format(layout)
 }
 
 func (f *textFormater) format(iow io.Writer, serie string, timestamp int64) error {
 	if f.withTimestamp {
-		fmt.Fprintf(iow, "%s: %d\n", serie, timestamp)
+		fmt.Fprintf(iow, "%s: %s\n", serie, formatTimestamp(timestamp, f.timestampLayout))
 	} else {
 		fmt.Fprintf(iow, "%s\n", serie)
 	}
@@ -31,7 +48,8 @@ func (f *textFormater) format(iow io.Writer, serie string, timestamp int64) erro
 }
 
 type jsonFormater struct {
-	withTimestamp bool
+	withTimestamp   bool
+	timestampLayout string
 }
 
 func (f *jsonFormater) format(iow io.Writer, serie string, timestamp int64) error {
@@ -48,7 +66,7 @@ func (f *jsonFormater) format(iow io.Writer, serie string, timestamp int64) erro
 	}
 
 	if f.withTimestamp {
-		data["Timestamp"] = timestamp
+		data["Timestamp"] = formatTimestamp(timestamp, f.timestampLayout)
 	}
 	return f.formatLine(iow, data)
 }
@@ -69,22 +87,25 @@ type OldSeriesRule struct {
 
 	series   map[string]int64
 	formater formater
+
+	logger *log.Logger
 }
 
 // OldSerieRuleConfig represents the toml configuration for OldSerieRule
 type OldSerieRuleConfig struct {
-	Time      string
-	Out       string
-	Format    string
-	Timestamp bool
+	Time            string
+	Out             string
+	Format          string
+	Timestamp       bool
+	TimestampLayout string
 }
 
-func newFormater(format string, withTimestamp bool) (formater, error) {
+func newFormater(format string, withTimestamp bool, timestampLayout string) (formater, error) {
 	switch format {
 	case "text":
-		return &textFormater{withTimestamp: withTimestamp}, nil
+		return &textFormater{withTimestamp: withTimestamp, timestampLayout: timestampLayout}, nil
 	case "json":
-		return &jsonFormater{withTimestamp: withTimestamp}, nil
+		return &jsonFormater{withTimestamp: withTimestamp, timestampLayout: timestampLayout}, nil
 	default:
 		return nil, fmt.Errorf("Unknown format %s", format)
 	}
@@ -92,7 +113,7 @@ func newFormater(format string, withTimestamp bool) (formater, error) {
 
 // NewOldSeriesRule creates a new OldSeriesRule
 func NewOldSeriesRule(t time.Time, out io.Writer, format string) (*OldSeriesRule, error) {
-	formater, err := newFormater(format, false)
+	formater, err := newFormater(format, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +127,7 @@ func newOldSeriesRule(t time.Time, out io.Writer, formater formater) *OldSeriesR
 		out:      out,
 		series:   make(map[string]int64),
 		formater: formater,
+		logger:   logging.GetLogger("OldSeriesRule"),
 	}
 }
 
@@ -137,10 +159,16 @@ func (r *OldSeriesRule) End() {
 	}
 	sort.Strings(keys)
 
+	count := 0
+
 	for _, key := range keys {
-		ts := r.series[key]
-		r.formater.format(r.out, key, ts)
+		maxTs := r.series[key]
+		if maxTs <= r.unixNano {
+			r.formater.format(r.out, key, maxTs)
+			count++
+		}
 	}
+	r.logger.Printf("Detected %d/%d series as old", count, len(keys))
 }
 
 // StartShard implements Rule interface
@@ -178,15 +206,13 @@ func (r *OldSeriesRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
 	maxTs := values[len(values)-1].UnixNano()
 
-	if maxTs <= r.unixNano {
-		s := string(seriesKey)
-		if ts, ok := r.series[s]; ok {
-			if maxTs > ts {
-				r.series[s] = maxTs
-			}
-		} else {
+	s := string(seriesKey)
+	if ts, ok := r.series[s]; ok {
+		if maxTs > ts {
 			r.series[s] = maxTs
 		}
+	} else {
+		r.series[s] = maxTs
 	}
 
 	return nil, nil, nil
@@ -224,7 +250,7 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 	} else if c.Out == "stderr" {
 		out = os.Stderr
 	} else {
-		out, err = os.Open(c.Out)
+		out, err = os.Create(c.Out)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +261,7 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 		format = c.Format
 	}
 
-	formater, err := newFormater(format, c.Timestamp)
+	formater, err := newFormater(format, c.Timestamp, c.TimestampLayout)
 	if err != nil {
 		return nil, err
 	}
