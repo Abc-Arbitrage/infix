@@ -80,8 +80,8 @@ func (f *jsonFormater) formatLine(iow io.Writer, data map[string]interface{}) er
 	return nil
 }
 
-// OldSeriesRule defines a read-only rule to retrieve series that are oldest than a given timestamp
-type OldSeriesRule struct {
+// OldSerieRule defines a read-only rule to retrieve series that are oldest than a given timestamp
+type OldSerieRule struct {
 	unixNano int64
 	out      io.Writer
 
@@ -111,48 +111,48 @@ func newFormater(format string, withTimestamp bool, timestampLayout string) (for
 	}
 }
 
-// NewOldSeriesRule creates a new OldSeriesRule
-func NewOldSeriesRule(t time.Time, out io.Writer, format string) (*OldSeriesRule, error) {
+// NewOldSerieRule creates a new OldSerieRule
+func NewOldSerieRule(t time.Time, out io.Writer, format string) (*OldSerieRule, error) {
 	formater, err := newFormater(format, false, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return newOldSeriesRule(t, out, formater), nil
+	return newOldSerieRule(t, out, formater), nil
 }
 
-func newOldSeriesRule(t time.Time, out io.Writer, formater formater) *OldSeriesRule {
-	return &OldSeriesRule{
+func newOldSerieRule(t time.Time, out io.Writer, formater formater) *OldSerieRule {
+	return &OldSerieRule{
 		unixNano: t.UnixNano() / int64(time.Nanosecond),
 		out:      out,
 		series:   make(map[string]int64),
 		formater: formater,
-		logger:   logging.GetLogger("OldSeriesRule"),
+		logger:   logging.GetLogger("OldSerieRule"),
 	}
 }
 
 // CheckMode sets the check mode on the rule
-func (r *OldSeriesRule) CheckMode(check bool) {
+func (r *OldSerieRule) CheckMode(check bool) {
 
 }
 
 // Flags implements Rule interface
-func (r *OldSeriesRule) Flags() int {
+func (r *OldSerieRule) Flags() int {
 	return TSMReadOnly
 }
 
 // WithLogger sets the logger on the rule
-func (r *OldSeriesRule) WithLogger(logger *log.Logger) {
+func (r *OldSerieRule) WithLogger(logger *log.Logger) {
 
 }
 
 // Start implements Rule interface
-func (r *OldSeriesRule) Start() {
+func (r *OldSerieRule) Start() {
 
 }
 
 // End implements Rule interface
-func (r *OldSeriesRule) End() {
+func (r *OldSerieRule) End() {
 	var keys []string
 	for k := range r.series {
 		keys = append(keys, k)
@@ -172,37 +172,37 @@ func (r *OldSeriesRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *OldSeriesRule) StartShard(info storage.ShardInfo) {
+func (r *OldSerieRule) StartShard(info storage.ShardInfo) {
 
 }
 
 // EndShard implements Rule interface
-func (r *OldSeriesRule) EndShard() error {
+func (r *OldSerieRule) EndShard() error {
 	return nil
 }
 
 // StartTSM implements Rule interface
-func (r *OldSeriesRule) StartTSM(path string) {
+func (r *OldSerieRule) StartTSM(path string) {
 
 }
 
 // EndTSM implements Rule interface
-func (r *OldSeriesRule) EndTSM() {
+func (r *OldSerieRule) EndTSM() {
 
 }
 
 // StartWAL implements Rule interface
-func (r *OldSeriesRule) StartWAL(path string) {
+func (r *OldSerieRule) StartWAL(path string) {
 
 }
 
 // EndWAL implements Rule interface
-func (r *OldSeriesRule) EndWAL() {
+func (r *OldSerieRule) EndWAL() {
 
 }
 
 // Apply implements Rule interface
-func (r *OldSeriesRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
+func (r *OldSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
 	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
 	maxTs := values[len(values)-1].UnixNano()
 
@@ -219,7 +219,7 @@ func (r *OldSeriesRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 }
 
 // Print will print the list of series detected as old
-func (r *OldSeriesRule) Print(iow io.Writer) {
+func (r *OldSerieRule) Print(iow io.Writer) {
 }
 
 // Sample implements Config interface
@@ -266,5 +266,5 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 		return nil, err
 	}
 
-	return newOldSeriesRule(t, out, formater), nil
+	return newOldSerieRule(t, out, formater), nil
 }
