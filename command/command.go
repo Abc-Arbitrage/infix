@@ -156,11 +156,11 @@ func (cmd *Command) process(shards []storage.ShardInfo) error {
 		}
 	}
 
-	logging.Flush(cmd.Stdout)
-
 	for _, r := range cmd.rules {
 		r.End()
 	}
+
+	logging.Flush(cmd.Stdout)
 
 	return nil
 }
