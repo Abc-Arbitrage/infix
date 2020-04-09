@@ -30,7 +30,7 @@ type RenameMeasurementRule struct {
 
 // RenameMeasurementConfig represents the toml configuration for RenameMeasurementRule
 type RenameMeasurementConfig struct {
-	From string
+	From filter.Filter
 	To   string
 }
 
@@ -53,9 +53,11 @@ func NewRenameMeasurementWithPattern(pattern string, renameFn RenameFn) (*Rename
 }
 
 // NewRenameMeasurementWithFilter creates a new RenameMeasurementRule to rename measurements that uses the given filter
-func NewRenameMeasurementWithFilter(filter filter.Filter, renameFn RenameFn) *RenameMeasurementRule {
+func NewRenameMeasurementWithFilter(f filter.Filter, renameFn RenameFn) *RenameMeasurementRule {
+	measurementFilter := filter.NewMeasurementFilter(f)
+
 	return &RenameMeasurementRule{
-		filter:   filter,
+		filter:   measurementFilter,
 		renameFn: renameFn,
 		renamed:  make(map[string]string),
 		check:    false,
@@ -149,15 +151,16 @@ func (r *RenameMeasurementRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *RenameMeasurementRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, tags := models.ParseKey(seriesKey)
+	if r.filter.Filter(key) {
+		seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
+		measurement, tags := models.ParseKey(seriesKey)
 
-	if r.filter.Filter([]byte(measurement)) {
 		newName := r.renameFn(measurement)
 		r.logger.Printf("Renaming '%s' to '%s'", measurement, newName)
 		newSeriesKey := models.MakeKey([]byte(newName), tags)
 		newKey := tsm1.SeriesFieldKeyBytes(string(newSeriesKey), string(field))
 		r.renamed[measurement] = newName
+
 		return newKey, values, nil
 	}
 
@@ -173,21 +176,26 @@ func (r *RenameMeasurementRule) Count() int {
 func (c *RenameMeasurementConfig) Sample() string {
 	return `
     [[rules.rename-measurement]]
-        from = cpu
-        to   = linux.cpu
+        [rules.rename-measurement.from.pattern]
+            pattern="^(cpu|disk)$"
+        to="linux.$1"
     `
 }
 
 // Build implements Config interface
 func (c *RenameMeasurementConfig) Build() (Rule, error) {
-	filter, err := filter.NewPatternFilter(c.From)
-	if err != nil {
-		return nil, err
+	var renameFn RenameFn
+
+	patternFilter, ok := c.From.(*filter.PatternFilter)
+	if ok {
+		renameFn = func(name string) string {
+			return string(patternFilter.Pattern.ReplaceAll([]byte(name), []byte(c.To)))
+		}
+	} else {
+		renameFn = func(name string) string {
+			return c.To
+		}
 	}
 
-	renameFn := func(name string) string {
-		return string(filter.Pattern.ReplaceAll([]byte(name), []byte(c.To)))
-	}
-
-	return NewRenameMeasurementWithFilter(filter, renameFn), nil
+	return NewRenameMeasurementWithFilter(c.From, renameFn), nil
 }

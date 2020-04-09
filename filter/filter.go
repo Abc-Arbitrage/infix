@@ -40,6 +40,11 @@ type PatternFilter struct {
 	Pattern *regexp.Regexp
 }
 
+// PatternFilterConfig represents the toml configuration of a pattern filter
+type PatternFilterConfig struct {
+	Pattern string
+}
+
 // NewPatternFilter creates a new PatternFilter with the given pattern
 func NewPatternFilter(pattern string) (*PatternFilter, error) {
 	r, err := regexp.Compile(pattern)
@@ -57,6 +62,24 @@ func NewPatternFilter(pattern string) (*PatternFilter, error) {
 // Filter implements the Filter interface
 func (f *PatternFilter) Filter(key []byte) bool {
 	return f.Pattern.Match(key)
+}
+
+// Sample implement Config interface
+func (c *PatternFilterConfig) Sample() string {
+	return `
+		 [[rules.rename-measurement]]
+			  [rules.rename-measurement.from.pattern]
+			        pattern="^(cpu|disk)$"
+	`
+}
+
+// Build implements Config interface
+func (c *PatternFilterConfig) Build() (Filter, error) {
+	f, err := NewPatternFilter(c.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // IncludeFilter defines a filter to only include a list of strings

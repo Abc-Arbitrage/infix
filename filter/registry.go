@@ -5,6 +5,9 @@ import (
 )
 
 func init() {
+	RegisterFilter("pattern", func() Config {
+		return &PatternFilterConfig{}
+	})
 	RegisterFilter("file", func() Config {
 		return &FileFilterConfiguration{}
 	})
