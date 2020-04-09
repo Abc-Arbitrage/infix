@@ -261,9 +261,16 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		}
 
 		for _, r := range writeRules {
-			key, values, err = r.Apply(key, values)
+			newKey, newValues, err := r.Apply(key, values)
 			if err != nil {
 				return err
+			}
+
+			if newKey != nil {
+				key = newKey
+			}
+			if newValues != nil {
+				values = newValues
 			}
 		}
 
@@ -294,6 +301,8 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 			return err
 		}
 	}
+
+	log.Printf("%d total filtered keys", filtered)
 
 	if err := w.Close(); err != nil {
 		return err

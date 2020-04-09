@@ -8,6 +8,9 @@ func init() {
 	RegisterRule("rename-measurement", func() Config {
 		return &RenameMeasurementConfig{}
 	})
+	RegisterRule("drop-measurement", func() Config {
+		return &DropMeasurementRuleConfig{}
+	})
 	RegisterRule("old-serie", func() Config {
 		return &OldSerieRuleConfig{}
 	})

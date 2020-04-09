@@ -163,9 +163,3 @@ func newTestShard(measurements []measurementFields) storage.ShardInfo {
 		FieldsIndex:     index,
 	}
 }
-
-func makeKey(measurement string, tags map[string]string, field string) []byte {
-	t := models.NewTags(tags)
-	seriesKey := models.MakeKey([]byte(measurement), t)
-	return tsm1.SeriesFieldKeyBytes(string(seriesKey), field)
-}
