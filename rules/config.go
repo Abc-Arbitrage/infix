@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 	"io/ioutil"
-	"reflect"
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -68,7 +67,7 @@ func loadRule(name string, table *ast.Table) (Rule, error) {
 		return nil, err
 	}
 
-	if err := unmarshalFilters(table, config); err != nil {
+	if err := filter.UnmarshalConfig(table, config); err != nil {
 		return nil, err
 	}
 
@@ -77,26 +76,4 @@ func loadRule(name string, table *ast.Table) (Rule, error) {
 	}
 
 	return config.Build()
-}
-
-func unmarshalFilters(table *ast.Table, config Config) error {
-	e := reflect.ValueOf(config).Elem()
-	filterType := reflect.TypeOf((*filter.Filter)(nil)).Elem()
-
-	for i := 0; i < e.NumField(); i++ {
-		field := e.Type().Field(i)
-		varName := field.Name
-		varType := field.Type
-
-		if varType.Implements(filterType) {
-			f, err := filter.Unmarshal(table, varName)
-			if err != nil {
-				return err
-			}
-			e.Field(i).Set(reflect.ValueOf(f))
-		}
-
-	}
-
-	return nil
 }

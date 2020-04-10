@@ -2,21 +2,21 @@ package filter
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"regexp"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+	"github.com/naoina/toml/ast"
 )
+
+// Make sure that WhereFilterConfig is a ManualConfig
+var _ ManualConfig = &WhereFilterConfig{}
 
 // Filter defines an interface to filter and skip keys when applying rules
 type Filter interface {
 	Filter(key []byte) bool
-}
-
-// TagsFilter defines an interface to filter tags
-type TagsFilter interface {
-	Filter(tags models.Tags) bool
 }
 
 // Set defines a set of filters that must pass
@@ -187,35 +187,50 @@ func (f *RawSerieFilter) Filter(key []byte) bool {
 	return f.filter.Filter(seriesKey)
 }
 
-// SerieFilter defines a filter restricted to the serie part of a key
+// SerieFilter defines a filter restricted to the serie and field part of a key
 type SerieFilter struct {
 	measurementFilter Filter
-	tagsFilter        TagsFilter
+	tagsFilter        Filter
+	fieldFilter       Filter
+}
+
+// SerieFilterConfig represents the toml configuration of a SerieFilter
+type SerieFilterConfig struct {
+	Measurement Filter
+	Tag         Filter
+	Field       Filter
 }
 
 // Filter implements Filter interface
 func (f *SerieFilter) Filter(key []byte) bool {
-	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, tags := models.ParseKeyBytes(seriesKey)
-
-	return f.measurementFilter.Filter(measurement) && f.tagsFilter.Filter(tags)
-}
-
-// SerieFieldFilter defines a filter based on (measurement, tags, field) components of a key
-type SerieFieldFilter struct {
-	measurementFilter Filter
-	tagsFilter        TagsFilter
-	fieldFilter       Filter
-}
-
-// Filter implements Filter interface
-func (f *SerieFieldFilter) Filter(key []byte) bool {
 	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, tags := models.ParseKeyBytes(seriesKey)
+	measurement, _ := models.ParseKeyBytes(seriesKey)
 
-	return f.measurementFilter.Filter(measurement) &&
-		f.tagsFilter.Filter(tags) &&
-		f.fieldFilter.Filter(field)
+	if f.fieldFilter == nil {
+		return f.measurementFilter.Filter(measurement) && f.tagsFilter.Filter(seriesKey)
+	}
+
+	return f.measurementFilter.Filter(measurement) && f.tagsFilter.Filter(seriesKey) && f.fieldFilter.Filter(field)
+}
+
+// Sample implements Config interface
+func (c *SerieFilterConfig) Sample() string {
+	return ``
+}
+
+// Build implements Config interface
+func (c *SerieFilterConfig) Build() (Filter, error) {
+	if c.Tag == nil {
+		return nil, fmt.Errorf("missing tag filter")
+	}
+
+	f := &SerieFilter{
+		measurementFilter: c.Measurement,
+		tagsFilter:        c.Tag,
+		fieldFilter:       c.Field,
+	}
+
+	return f, nil
 }
 
 // FileFilterConfiguration represents the toml configuration for a filter based on file content
@@ -241,6 +256,77 @@ func (c *FileFilterConfiguration) Build() (Filter, error) {
 
 	f := &RawFilter{
 		content: content,
+	}
+	return f, nil
+}
+
+// WhereFilter defines a filter to restrict keys based on tag values
+type WhereFilter struct {
+	where map[string]*regexp.Regexp
+}
+
+// WhereFilterConfig represents toml configuration for WhereFilter
+type WhereFilterConfig struct {
+	Where map[string]string
+}
+
+// Filter implements Filter interface
+func (f *WhereFilter) Filter(key []byte) bool {
+	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+	_, tags := models.ParseKey(seriesKey)
+
+	for _, tag := range tags {
+		if val, ok := f.where[string(tag.Key)]; ok {
+			if val.Match(tag.Value) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// Sample implements Config interface
+func (c *WhereFilterConfig) Sample() string {
+	return `
+	[filters.serie]
+		[filters.serie.tag.where]
+			cpu="^(cpu0|cpu1)"
+	`
+}
+
+// Unmarshal implements ManualConfig interface
+func (c *WhereFilterConfig) Unmarshal(table *ast.Table) error {
+	for key, keyVal := range table.Fields {
+		subVal, ok := keyVal.(*ast.KeyValue)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration. Expected key-value pair", key)
+		}
+
+		stringVal, ok := subVal.Value.(*ast.String)
+		if !ok {
+			return fmt.Errorf("%s:%d invalid configuration. Expected string value", key, subVal.Line)
+		}
+
+		c.Where[subVal.Key] = stringVal.Value
+	}
+	return nil
+}
+
+// Build implements Config interface
+func (c *WhereFilterConfig) Build() (Filter, error) {
+	where := make(map[string]*regexp.Regexp)
+
+	for key, val := range c.Where {
+		re, err := regexp.Compile(val)
+		if err != nil {
+			return nil, err
+		}
+		where[key] = re
+	}
+
+	f := &WhereFilter{
+		where: where,
 	}
 	return f, nil
 }

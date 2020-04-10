@@ -11,6 +11,14 @@ func init() {
 	RegisterFilter("file", func() Config {
 		return &FileFilterConfiguration{}
 	})
+	RegisterFilter("serie", func() Config {
+		return &SerieFilterConfig{}
+	})
+	RegisterFilter("where", func() Config {
+		return &WhereFilterConfig{
+			Where: make(map[string]string),
+		}
+	})
 }
 
 // NewFilterFunc represents a callback to register a filter's configuration to be able to load it from toml
