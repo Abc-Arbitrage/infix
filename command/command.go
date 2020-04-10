@@ -365,9 +365,13 @@ func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) e
 					}
 				}
 
-				t.Values[string(newKey)] = values
-				if bytes.Compare([]byte(key), newKey) != 0 {
-					toDelete = append(toDelete, string(newKey))
+				if newKey == nil {
+					toDelete = append(toDelete, string(key))
+				} else {
+					t.Values[string(newKey)] = values
+					if bytes.Compare([]byte(key), newKey) != 0 {
+						toDelete = append(toDelete, string(key))
+					}
 				}
 			}
 
