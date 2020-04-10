@@ -203,16 +203,18 @@ func (r *OldSerieRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *OldSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
-	maxTs := values[len(values)-1].UnixNano()
+	if len(values) > 0 {
+		seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+		maxTs := values[len(values)-1].UnixNano()
 
-	s := string(seriesKey)
-	if ts, ok := r.series[s]; ok {
-		if maxTs > ts {
+		s := string(seriesKey)
+		if ts, ok := r.series[s]; ok {
+			if maxTs > ts {
+				r.series[s] = maxTs
+			}
+		} else {
 			r.series[s] = maxTs
 		}
-	} else {
-		r.series[s] = maxTs
 	}
 
 	return nil, nil, nil
