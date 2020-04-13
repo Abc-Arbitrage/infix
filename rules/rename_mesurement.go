@@ -91,8 +91,9 @@ func (r *RenameMeasurementRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *RenameMeasurementRule) StartShard(info storage.ShardInfo) {
+func (r *RenameMeasurementRule) StartShard(info storage.ShardInfo) bool {
 	r.shard = info
+	return true
 }
 
 // EndShard implements Rule interface
@@ -134,7 +135,8 @@ func (r *RenameMeasurementRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *RenameMeasurementRule) StartTSM(path string) {
+func (r *RenameMeasurementRule) StartTSM(path string) bool {
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -142,7 +144,8 @@ func (r *RenameMeasurementRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *RenameMeasurementRule) StartWAL(path string) {
+func (r *RenameMeasurementRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface

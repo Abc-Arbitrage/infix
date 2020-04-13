@@ -65,9 +65,10 @@ func (r *UpdateMeasurementFieldTypeRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartShard(info storage.ShardInfo) {
+func (r *UpdateMeasurementFieldTypeRule) StartShard(info storage.ShardInfo) bool {
 	r.shard = info
 	r.count = 0
+	return true
 }
 
 // EndShard implements Rule interface
@@ -102,7 +103,8 @@ func (r *UpdateMeasurementFieldTypeRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartTSM(path string) {
+func (r *UpdateMeasurementFieldTypeRule) StartTSM(path string) bool {
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -110,7 +112,8 @@ func (r *UpdateMeasurementFieldTypeRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartWAL(path string) {
+func (r *UpdateMeasurementFieldTypeRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface

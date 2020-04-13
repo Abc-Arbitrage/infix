@@ -80,8 +80,9 @@ func (r *DropMeasurementRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *DropMeasurementRule) StartShard(info storage.ShardInfo) {
+func (r *DropMeasurementRule) StartShard(info storage.ShardInfo) bool {
 	r.shard = info
+	return true
 }
 
 // EndShard implements Rule interface
@@ -108,7 +109,8 @@ func (r *DropMeasurementRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *DropMeasurementRule) StartTSM(path string) {
+func (r *DropMeasurementRule) StartTSM(path string) bool {
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -116,7 +118,8 @@ func (r *DropMeasurementRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *DropMeasurementRule) StartWAL(path string) {
+func (r *DropMeasurementRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface
@@ -153,6 +156,5 @@ func (c *DropMeasurementRuleConfig) Sample() string {
 
 // Build implements Config interface
 func (c *DropMeasurementRuleConfig) Build() (Rule, error) {
-	f := filter.NewMeasurementFilter(c.DropFilter)
-	return NewDropMeasurementWithFilter(f), nil
+	return NewDropMeasurementWithFilter(c.DropFilter), nil
 }

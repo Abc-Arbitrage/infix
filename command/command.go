@@ -211,6 +211,15 @@ func (cmd *Command) processShard(info storage.ShardInfo) error {
 func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) error {
 	fmt.Fprintf(cmd.Stdout, "Enforcing TSM file '%s'...\n", tsmFilePath)
 
+	rs := cmd.filterRules(cmd.rules, func(r rules.Rule) bool {
+		return r.StartTSM(tsmFilePath)
+	})
+
+	if len(rs) == 0 {
+		log.Printf("No candidate rule found for processing TSM file, skipping.")
+		return nil
+	}
+
 	f, err := os.Open(tsmFilePath)
 	if err != nil {
 		return err
@@ -230,15 +239,11 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		return err
 	}
 
-	for _, r := range cmd.rules {
-		r.StartTSM(tsmFilePath)
-	}
-
 	log.Printf("%d total keys", r.KeyCount())
 	filtered := 0
 
-	readRules := cmd.filterRules(rules.TSMReadOnly)
-	writeRules := cmd.filterRules(rules.TSMWriteOnly)
+	readRules := cmd.filterFlaggedRules(rs, rules.TSMReadOnly)
+	writeRules := cmd.filterFlaggedRules(rs, rules.TSMWriteOnly)
 
 	for i := 0; i < r.KeyCount(); i++ {
 		key, _ := r.KeyAt(i)
@@ -318,6 +323,15 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) error {
 	fmt.Fprintf(cmd.Stdout, "Enforcing WAL file '%s'...\n", walFilePath)
 
+	rs := cmd.filterRules(cmd.rules, func(r rules.Rule) bool {
+		return r.StartWAL(walFilePath)
+	})
+
+	if len(rs) == 0 {
+		log.Printf("No candidate rule found for processing WAL file, skipping.")
+		return nil
+	}
+
 	f, err := os.Open(walFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -330,7 +344,7 @@ func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) e
 	r := tsm1.NewWALSegmentReader(f)
 	defer r.Close()
 
-	w, output, outputPath, err := cmd.createWALWriter(walFilePath)
+	w, output, outputPath, err := cmd.createWALWriter(rs, walFilePath)
 	if output != nil {
 		defer output.Close()
 	}
@@ -339,9 +353,8 @@ func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) e
 		return err
 	}
 
-	for _, r := range cmd.rules {
-		r.StartWAL(walFilePath)
-	}
+	readRules := cmd.filterFlaggedRules(rs, rules.WALReadOnly)
+	writeRules := cmd.filterFlaggedRules(rs, rules.WALWriteOnly)
 
 	count := 0
 
@@ -357,8 +370,15 @@ func (cmd *Command) processWALFile(info storage.ShardInfo, walFilePath string) e
 		case *tsm1.WriteWALEntry:
 			var toDelete []string
 			for key, values := range t.Values {
+				for _, r := range readRules {
+					_, _, err = r.Apply([]byte(key), values)
+					if err != nil {
+						return err
+					}
+				}
+
 				newKey := []byte(key)
-				for _, r := range cmd.rules {
+				for _, r := range writeRules {
 					newKey, values, err = r.Apply(newKey, values)
 					if err != nil {
 						return err
@@ -414,7 +434,7 @@ func (cmd *Command) validate() error {
 
 func (cmd *Command) createRewriter(tsmFilePath string) (storage.TSMRewriter, error) {
 	// If all rules are read-only, just return a NoopRewriter
-	readRules := cmd.filterRules(rules.TSMReadOnly)
+	readRules := cmd.filterFlaggedRules(cmd.rules, rules.TSMReadOnly)
 	readonly := len(readRules) == len(cmd.rules)
 
 	if cmd.check || readonly {
@@ -451,8 +471,12 @@ func (cmd *Command) createRewriter(tsmFilePath string) (storage.TSMRewriter, err
 	return w, nil
 }
 
-func (cmd *Command) createWALWriter(walFilePath string) (*tsm1.WALSegmentWriter, *os.File, string, error) {
-	if cmd.check {
+func (cmd *Command) createWALWriter(rs []rules.Rule, walFilePath string) (*tsm1.WALSegmentWriter, *os.File, string, error) {
+	// If all rules are read-only, just return nil
+	readRules := cmd.filterFlaggedRules(rs, rules.WALReadOnly)
+	readonly := len(readRules) == len(rs)
+
+	if cmd.check || readonly {
 		return nil, nil, "", nil
 	}
 
@@ -473,9 +497,15 @@ func (cmd *Command) createWALWriter(walFilePath string) (*tsm1.WALSegmentWriter,
 	return w, output, outputPath, nil
 }
 
-func (cmd *Command) filterRules(flags int) (ret []rules.Rule) {
-	for _, r := range cmd.rules {
-		if r.Flags()&flags != 0 {
+func (cmd *Command) filterFlaggedRules(rs []rules.Rule, flags int) []rules.Rule {
+	return cmd.filterRules(rs, func(r rules.Rule) bool {
+		return r.Flags()&flags != 0
+	})
+}
+
+func (cmd *Command) filterRules(rules []rules.Rule, filterFn func(rules.Rule) bool) (ret []rules.Rule) {
+	for _, r := range rules {
+		if filterFn(r) {
 			ret = append(ret, r)
 		}
 	}

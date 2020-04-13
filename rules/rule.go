@@ -31,13 +31,13 @@ type Rule interface {
 	Start()
 	End()
 
-	StartShard(info storage.ShardInfo)
+	StartShard(info storage.ShardInfo) bool
 	EndShard() error
 
-	StartTSM(path string)
+	StartTSM(path string) bool
 	EndTSM()
 
-	StartWAL(path string)
+	StartWAL(path string) bool
 	EndWAL()
 
 	Apply(key []byte, values []tsm1.Value) (newKey []byte, newValues []tsm1.Value, err error)

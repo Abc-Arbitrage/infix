@@ -172,8 +172,8 @@ func (r *OldSerieRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *OldSerieRule) StartShard(info storage.ShardInfo) {
-
+func (r *OldSerieRule) StartShard(info storage.ShardInfo) bool {
+	return true
 }
 
 // EndShard implements Rule interface
@@ -182,8 +182,21 @@ func (r *OldSerieRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *OldSerieRule) StartTSM(path string) {
+func (r *OldSerieRule) StartTSM(path string) bool {
+	f, err := os.Open(path)
 
+	if err != nil {
+		return false
+	}
+
+	defer f.Close()
+	reader, err := tsm1.NewTSMReader(f)
+	if err != nil {
+		return false
+	}
+
+	minTime, maxTime := reader.TimeRange()
+	return r.unixNano >= minTime && r.unixNano <= maxTime
 }
 
 // EndTSM implements Rule interface
@@ -192,8 +205,8 @@ func (r *OldSerieRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *OldSerieRule) StartWAL(path string) {
-
+func (r *OldSerieRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface

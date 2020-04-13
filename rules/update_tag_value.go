@@ -60,7 +60,8 @@ func (r *UpdateTagValueRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *UpdateTagValueRule) StartShard(info storage.ShardInfo) {
+func (r *UpdateTagValueRule) StartShard(info storage.ShardInfo) bool {
+	return true
 }
 
 // EndShard implements Rule interface
@@ -69,7 +70,8 @@ func (r *UpdateTagValueRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *UpdateTagValueRule) StartTSM(path string) {
+func (r *UpdateTagValueRule) StartTSM(path string) bool {
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -77,7 +79,8 @@ func (r *UpdateTagValueRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *UpdateTagValueRule) StartWAL(path string) {
+func (r *UpdateTagValueRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface

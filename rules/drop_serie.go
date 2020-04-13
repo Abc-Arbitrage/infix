@@ -59,8 +59,8 @@ func (r *DropSerieRule) End() {
 }
 
 // StartShard implements Rule interface
-func (r *DropSerieRule) StartShard(info storage.ShardInfo) {
-
+func (r *DropSerieRule) StartShard(info storage.ShardInfo) bool {
+	return true
 }
 
 // EndShard implements Rule interface
@@ -69,8 +69,8 @@ func (r *DropSerieRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *DropSerieRule) StartTSM(path string) {
-
+func (r *DropSerieRule) StartTSM(path string) bool {
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -79,8 +79,8 @@ func (r *DropSerieRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *DropSerieRule) StartWAL(path string) {
-
+func (r *DropSerieRule) StartWAL(path string) bool {
+	return true
 }
 
 // EndWAL implements Rule interface
@@ -103,11 +103,15 @@ func (r *DropSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 // Sample implements the Config interface
 func (c *DropSerieRuleConfiguration) Sample() string {
 	return `
-	[[rules.drop-serie]]
-		 [[rules.drop-serie.dropFilter.serie]]
-			  measurement="cpu"
-			  [[rules.drop-serie.dropFilter.serie.where]]
-			  		cpu="cpu0"
+		[[rules.drop-serie]]
+			[rules.drop-serie.dropFilter.serie]
+				measurement="cpu"
+				[rules.drop-serie.dropFilter.serie.where]
+					cpu="cpu0"
+				[rules.drop-serie.dropFilter.serie.field]
+					[rules.drop-serie.dropFilter.serie.field.pattern]
+						pattern="^(idle|usage_idle)$"
+			        
 	`
 }
 
