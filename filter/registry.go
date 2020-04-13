@@ -9,7 +9,7 @@ func init() {
 		return &PatternFilterConfig{}
 	})
 	RegisterFilter("file", func() Config {
-		return &FileFilterConfiguration{}
+		return &FileFilterConfig{}
 	})
 	RegisterFilter("serie", func() Config {
 		return &SerieFilterConfig{}
@@ -18,6 +18,9 @@ func init() {
 		return &WhereFilterConfig{
 			Where: make(map[string]string),
 		}
+	})
+	RegisterFilter("strings", func() Config {
+		return &StringFilterConfig{}
 	})
 }
 

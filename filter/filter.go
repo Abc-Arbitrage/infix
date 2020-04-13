@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"strings"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
@@ -139,14 +140,14 @@ func (f *PassFilter) Filter(key []byte) bool {
 	return false
 }
 
-// RawFilter is a filter based on raw bytes
-type RawFilter struct {
-	content []byte
+// FuncFilter is a filter based on a filtering function
+type FuncFilter struct {
+	filterFn func(key []byte) bool
 }
 
 // Filter implements Filter interface
-func (f *RawFilter) Filter(key []byte) bool {
-	return bytes.Contains(f.content, key)
+func (f *FuncFilter) Filter(key []byte) bool {
+	return f.filterFn(key)
 }
 
 // MeasurementFilter defines a filter restricted to measurement part of a key
@@ -233,33 +234,6 @@ func (c *SerieFilterConfig) Build() (Filter, error) {
 	return f, nil
 }
 
-// FileFilterConfiguration represents the toml configuration for a filter based on file content
-type FileFilterConfiguration struct {
-	Path string
-}
-
-// Sample implements Config interface
-func (c *FileFilterConfiguration) Sample() string {
-	return `
-	[[rules.drop-serie]]
-		 [rules.drop-serie.dropFilter.file]
-		 	path="file.log"
-	`
-}
-
-// Build implements Config interface
-func (c *FileFilterConfiguration) Build() (Filter, error) {
-	content, err := ioutil.ReadFile(c.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	f := &RawFilter{
-		content: content,
-	}
-	return f, nil
-}
-
 // WhereFilter defines a filter to restrict keys based on tag values
 type WhereFilter struct {
 	where map[string]*regexp.Regexp
@@ -327,6 +301,118 @@ func (c *WhereFilterConfig) Build() (Filter, error) {
 
 	f := &WhereFilter{
 		where: where,
+	}
+	return f, nil
+}
+
+// FileFilterConfig represents the toml configuration for a filter based on file content
+type FileFilterConfig struct {
+	Path string
+}
+
+// Sample implements Config interface
+func (c *FileFilterConfig) Sample() string {
+	return `
+	[[rules.drop-serie]]
+		 [rules.drop-serie.dropFilter.file]
+		 	path="file.log"
+	`
+}
+
+// Build implements Config interface
+func (c *FileFilterConfig) Build() (Filter, error) {
+	content, err := ioutil.ReadFile(c.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	filterFn := func(key []byte) bool {
+		return bytes.Contains(content, key)
+	}
+
+	f := &FuncFilter{
+		filterFn: filterFn,
+	}
+	return f, nil
+}
+
+// StringFilterConfig represents the toml configuration for a filter based on strings functions
+type StringFilterConfig struct {
+	Contains    string
+	ContainsAny string
+	Equal       string
+	EqualFold   string
+	HasPrefix   string
+	HasSuffix   string
+}
+
+// Sample implements Config interface
+func (c *StringFilterConfig) Sample() string {
+	return `
+		[filters.strings]
+			hasprefix="linux."
+	`
+}
+
+// Build implements Config interface
+func (c *StringFilterConfig) Build() (Filter, error) {
+	type filterFn func(key []byte) bool
+
+	var filterFns []filterFn
+
+	count := 0
+	if c.Contains != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return strings.Contains(string(key), c.Contains)
+		})
+		count++
+	}
+	if c.ContainsAny != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return strings.ContainsAny(string(key), c.ContainsAny)
+		})
+		count++
+	}
+	if c.Equal != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return string(key) == c.Equal
+		})
+		count++
+	}
+	if c.EqualFold != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return strings.EqualFold(string(key), c.EqualFold)
+		})
+		count++
+	}
+	if c.HasPrefix != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return strings.HasPrefix(string(key), c.HasPrefix)
+		})
+		count++
+	}
+	if c.HasSuffix != "" {
+		filterFns = append(filterFns, func(key []byte) bool {
+			return strings.HasSuffix(string(key), c.HasSuffix)
+		})
+		count++
+	}
+
+	fn := func(key []byte) bool {
+		for _, f := range filterFns {
+			if f(key) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if count == 0 {
+		return nil, fmt.Errorf("expected at least one parameter, got 0")
+	}
+
+	f := &FuncFilter{
+		filterFn: fn,
 	}
 	return f, nil
 }
