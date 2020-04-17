@@ -32,8 +32,12 @@ type Command struct {
 	walDir          string
 	database        string
 	retentionPolicy string
-	verbose         bool
-	check           bool
+
+	maxCacheSize      uint64
+	cacheSnapshotSize uint64
+
+	verbose bool
+	check   bool
 
 	shards []storage.ShardInfo
 
@@ -73,6 +77,9 @@ func (cmd *Command) Run(args ...string) error {
 	fs.StringVar(&cmd.walDir, "waldir", "/var/lib/influxdb/wal", "Path to WAL storage")
 	fs.StringVar(&cmd.database, "database", "", "The database to enforce")
 	fs.StringVar(&cmd.retentionPolicy, "retention", "", "The retention policy to enforce")
+	fs.Uint64Var(&cmd.maxCacheSize, "max-cache-size", tsdb.DefaultCacheMaxMemorySize, "The maximum in-memory cache size in bytes")
+	fs.Uint64Var(&cmd.cacheSnapshotSize, "cache-snapshot-size", tsdb.DefaultCacheSnapshotMemorySize,
+		"The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files.")
 	fs.StringVar(&cmd.config, "config", "", "The configuration file for rules")
 	fs.BoolVar(&cmd.verbose, "v", false, "Enable verbose logging")
 	fs.BoolVar(&cmd.check, "check", false, "Run in check mode")
@@ -121,27 +128,31 @@ func (cmd *Command) Run(args ...string) error {
 
 // printUsage prints the usage message to STDERR.
 func (cmd *Command) printUsage() {
-	usage := `Apply fixes to TSM files.
+	usage := `Apply rules to TSM and WAL files.
 
 Usage: infix [options]
 
     -datadir
-            Path to data storage (defaults to /var/lib/influxdb/data)
+        Path to data storage (defaults to /var/lib/influxdb/data)
     -waldir
-            Path to wal storage (defaults to /var/lib/influxdb/wal)
+        Path to wal storage (defaults to /var/lib/influxdb/wal)
     -database
-            The database to fix
+        The database to fix
     -retention
-            The retention policy to fix
+        The retention policy to fix
+    -max-cache-size
+        The maximum in-memory cache size in bytes (defaults to %d)
+    -cache-snapshot-size
+        The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files (defaults to %d)
     -v
-            Enable verbose logging
+        Enable verbose logging
     -check
-			Run in check mode (do not apply any change)
-	-config
-			The configuration file
+        Run in check mode (do not apply any change)
+    -config
+        The configuration file
 `
 
-	fmt.Fprintf(cmd.Stdout, usage)
+	fmt.Fprintf(cmd.Stdout, fmt.Sprintf(usage, tsdb.DefaultCacheMaxMemorySize, tsdb.DefaultCacheSnapshotMemorySize))
 }
 
 func (cmd *Command) process(shards []storage.ShardInfo) error {
@@ -467,7 +478,7 @@ func (cmd *Command) createRewriter(tsmFilePath string) (storage.TSMRewriter, err
 	}
 
 	log.Printf("Creating cached TSM rewriter to directory '%s'", outputDir)
-	w := storage.NewCachedTSMRewriter(tsdb.DefaultCacheMaxMemorySize, tsdb.DefaultCacheSnapshotMemorySize*10, outputDir)
+	w := storage.NewCachedTSMRewriter(cmd.maxCacheSize, cmd.cacheSnapshotSize, outputDir)
 	return w, nil
 }
 
