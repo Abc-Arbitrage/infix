@@ -85,6 +85,8 @@ type OldSerieRule struct {
 	unixNano int64
 	out      io.Writer
 
+	byField bool
+
 	series   map[string]int64
 	formater formater
 
@@ -94,6 +96,7 @@ type OldSerieRule struct {
 // OldSerieRuleConfig represents the toml configuration for OldSerieRule
 type OldSerieRuleConfig struct {
 	Time            string
+	ByField         bool
 	Out             string
 	Format          string
 	Timestamp       bool
@@ -112,18 +115,19 @@ func newFormater(format string, withTimestamp bool, timestampLayout string) (for
 }
 
 // NewOldSerieRule creates a new OldSerieRule
-func NewOldSerieRule(t time.Time, out io.Writer, format string) (*OldSerieRule, error) {
+func NewOldSerieRule(t time.Time, byField bool, out io.Writer, format string) (*OldSerieRule, error) {
 	formater, err := newFormater(format, false, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return newOldSerieRule(t, out, formater), nil
+	return newOldSerieRule(t, byField, out, formater), nil
 }
 
-func newOldSerieRule(t time.Time, out io.Writer, formater formater) *OldSerieRule {
+func newOldSerieRule(t time.Time, byField bool, out io.Writer, formater formater) *OldSerieRule {
 	return &OldSerieRule{
 		unixNano: t.UnixNano() / int64(time.Nanosecond),
+		byField:  byField,
 		out:      out,
 		series:   make(map[string]int64),
 		formater: formater,
@@ -183,20 +187,7 @@ func (r *OldSerieRule) EndShard() error {
 
 // StartTSM implements Rule interface
 func (r *OldSerieRule) StartTSM(path string) bool {
-	f, err := os.Open(path)
-
-	if err != nil {
-		return false
-	}
-
-	defer f.Close()
-	reader, err := tsm1.NewTSMReader(f)
-	if err != nil {
-		return false
-	}
-
-	minTime, maxTime := reader.TimeRange()
-	return r.unixNano >= minTime && r.unixNano <= maxTime
+	return true
 }
 
 // EndTSM implements Rule interface
@@ -217,10 +208,9 @@ func (r *OldSerieRule) EndWAL() {
 // Apply implements Rule interface
 func (r *OldSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
 	if len(values) > 0 {
-		seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
 		maxTs := values[len(values)-1].UnixNano()
-
-		s := string(seriesKey)
+		key := r.makeKey(key)
+		s := string(key)
 		if ts, ok := r.series[s]; ok {
 			if maxTs > ts {
 				r.series[s] = maxTs
@@ -235,6 +225,15 @@ func (r *OldSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Va
 
 // Print will print the list of series detected as old
 func (r *OldSerieRule) Print(iow io.Writer) {
+}
+
+func (r *OldSerieRule) makeKey(key []byte) string {
+	if !r.byField {
+		seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+		return string(seriesKey)
+	}
+
+	return string(key)
 }
 
 // Sample implements Config interface
@@ -281,5 +280,5 @@ func (c *OldSerieRuleConfig) Build() (Rule, error) {
 		return nil, err
 	}
 
-	return newOldSerieRule(t, out, formater), nil
+	return newOldSerieRule(t, c.ByField, out, formater), nil
 }
