@@ -46,7 +46,12 @@ func UnmarshalConfig(table *ast.Table, config interface{}) error {
 
 	}
 
-	return nil
+	filterConfig, ok := config.(Config)
+	if ok {
+		return unmarshalConfig(table, filterConfig)
+	}
+
+	return toml.UnmarshalTable(table, config)
 }
 
 // Unmarshal will unmarshal a filter from a toml table
@@ -79,7 +84,7 @@ func Unmarshal(table *ast.Table, name string) (Filter, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := unmarshalTable(keys[0], filterField, config); err != nil {
+			if err := unmarshalConfig(filterField, config); err != nil {
 				return nil, err
 			}
 			delete(table.Fields, filterName)
@@ -91,7 +96,7 @@ func Unmarshal(table *ast.Table, name string) (Filter, error) {
 	return nil, nil
 }
 
-func unmarshalTable(name string, table *ast.Table, config Config) error {
+func unmarshalConfig(table *ast.Table, config Config) error {
 	if manualConfig, ok := config.(ManualConfig); ok {
 		return manualConfig.Unmarshal(table)
 	}

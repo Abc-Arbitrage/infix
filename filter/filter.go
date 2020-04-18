@@ -68,13 +68,15 @@ func (f *PatternFilter) Filter(key []byte) bool {
 // Sample implement Config interface
 func (c *PatternFilterConfig) Sample() string {
 	return `
-		 [[filters.pattern]]
-			pattern="^(cpu|disk)$"
+		pattern="^(cpu|disk)$"
 	`
 }
 
 // Build implements Config interface
 func (c *PatternFilterConfig) Build() (Filter, error) {
+	if c.Pattern == "" {
+		return nil, fmt.Errorf("pattern must not be empry")
+	}
 	f, err := NewPatternFilter(c.Pattern)
 	if err != nil {
 		return nil, err
@@ -216,13 +218,12 @@ func (f *SerieFilter) Filter(key []byte) bool {
 // Sample implements Config interface
 func (c *SerieFilterConfig) Sample() string {
 	return `
-		[[filters.serie]]
-			measurement="cpu"
-			[filters.serie.where]
-				cpu="cpu0"
-			[filters.serie.field]
-				[filters.serie.field.pattern]
-					pattern="^(idle|usage_idle)$"
+		[measurement.strings]
+			equal="cpu"
+		[tag.where]
+			cpu="cpu0"
+		[field.pattern]
+			pattern="^(idle|usage_idle)$"
 	`
 }
 
@@ -251,6 +252,24 @@ type WhereFilterConfig struct {
 	Where map[string]string
 }
 
+// NewWhereFilter creates a new WhereFilter based on a map of tags key, value
+func NewWhereFilter(where map[string]string) (*WhereFilter, error) {
+	whereRe := make(map[string]*regexp.Regexp)
+
+	for key, val := range where {
+		re, err := regexp.Compile(val)
+		if err != nil {
+			return nil, err
+		}
+		whereRe[key] = re
+	}
+
+	f := &WhereFilter{
+		where: whereRe,
+	}
+	return f, nil
+}
+
 // Filter implements Filter interface
 func (f *WhereFilter) Filter(key []byte) bool {
 	seriesKey, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
@@ -270,9 +289,8 @@ func (f *WhereFilter) Filter(key []byte) bool {
 // Sample implements Config interface
 func (c *WhereFilterConfig) Sample() string {
 	return `
-	[[filters.serie]]
-		[filters.serie.tag.where]
-			cpu="^(cpu0|cpu1)"
+		cpu="^(cpu0|cpu1)$"
+		host="my-host"
 	`
 }
 
@@ -296,20 +314,7 @@ func (c *WhereFilterConfig) Unmarshal(table *ast.Table) error {
 
 // Build implements Config interface
 func (c *WhereFilterConfig) Build() (Filter, error) {
-	where := make(map[string]*regexp.Regexp)
-
-	for key, val := range c.Where {
-		re, err := regexp.Compile(val)
-		if err != nil {
-			return nil, err
-		}
-		where[key] = re
-	}
-
-	f := &WhereFilter{
-		where: where,
-	}
-	return f, nil
+	return NewWhereFilter(c.Where)
 }
 
 // FileFilter defines a filter based on a file content
@@ -352,7 +357,6 @@ type FileFilterConfig struct {
 // Sample implements Config interface
 func (c *FileFilterConfig) Sample() string {
 	return `
-	[[filters.file]]
 		path="file.log"
 	`
 }
@@ -375,9 +379,8 @@ type StringFilterConfig struct {
 // Sample implements Config interface
 func (c *StringFilterConfig) Sample() string {
 	return `
-		[[filters.strings]]
-			hasprefix="linux."
-			hassuffix=".gauge"
+		hasprefix="linux."
+		hassuffix=".gauge"
 	`
 }
 

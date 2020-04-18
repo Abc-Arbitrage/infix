@@ -71,9 +71,5 @@ func loadRule(name string, table *ast.Table) (Rule, error) {
 		return nil, err
 	}
 
-	if err := toml.UnmarshalTable(table, config); err != nil {
-		return nil, err
-	}
-
 	return config.Build()
 }
