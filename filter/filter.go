@@ -1,9 +1,9 @@
 package filter
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -68,9 +68,8 @@ func (f *PatternFilter) Filter(key []byte) bool {
 // Sample implement Config interface
 func (c *PatternFilterConfig) Sample() string {
 	return `
-		 [[rules.rename-measurement]]
-			  [rules.rename-measurement.from.pattern]
-			        pattern="^(cpu|disk)$"
+		 [[filters.pattern]]
+			pattern="^(cpu|disk)$"
 	`
 }
 
@@ -216,7 +215,15 @@ func (f *SerieFilter) Filter(key []byte) bool {
 
 // Sample implements Config interface
 func (c *SerieFilterConfig) Sample() string {
-	return ``
+	return `
+		[[filters.serie]]
+			measurement="cpu"
+			[filters.serie.where]
+				cpu="cpu0"
+			[filters.serie.field]
+				[filters.serie.field.pattern]
+					pattern="^(idle|usage_idle)$"
+	`
 }
 
 // Build implements Config interface
@@ -263,7 +270,7 @@ func (f *WhereFilter) Filter(key []byte) bool {
 // Sample implements Config interface
 func (c *WhereFilterConfig) Sample() string {
 	return `
-	[filters.serie]
+	[[filters.serie]]
 		[filters.serie.tag.where]
 			cpu="^(cpu0|cpu1)"
 	`
@@ -305,6 +312,38 @@ func (c *WhereFilterConfig) Build() (Filter, error) {
 	return f, nil
 }
 
+// FileFilter defines a filter based on a file content
+type FileFilter struct {
+	lines map[string]bool
+}
+
+// NewFileFilter creates a new FileFilter from a path
+func NewFileFilter(path string) (*FileFilter, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+
+	lines := make(map[string]bool)
+
+	for scanner.Scan() {
+		lines[scanner.Text()] = true
+	}
+
+	return &FileFilter{lines: lines}, nil
+}
+
+// Filter implements Filter interface
+func (f *FileFilter) Filter(key []byte) bool {
+	k := string(key)
+	_, ok := f.lines[k]
+	return ok
+}
+
 // FileFilterConfig represents the toml configuration for a filter based on file content
 type FileFilterConfig struct {
 	Path string
@@ -313,27 +352,14 @@ type FileFilterConfig struct {
 // Sample implements Config interface
 func (c *FileFilterConfig) Sample() string {
 	return `
-	[[rules.drop-serie]]
-		 [rules.drop-serie.dropFilter.file]
-		 	path="file.log"
+	[[filters.file]]
+		path="file.log"
 	`
 }
 
 // Build implements Config interface
 func (c *FileFilterConfig) Build() (Filter, error) {
-	content, err := ioutil.ReadFile(c.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	filterFn := func(key []byte) bool {
-		return bytes.Contains(content, key)
-	}
-
-	f := &FuncFilter{
-		filterFn: filterFn,
-	}
-	return f, nil
+	return NewFileFilter(c.Path)
 }
 
 // StringFilterConfig represents the toml configuration for a filter based on strings functions
@@ -349,8 +375,9 @@ type StringFilterConfig struct {
 // Sample implements Config interface
 func (c *StringFilterConfig) Sample() string {
 	return `
-		[filters.strings]
+		[[filters.strings]]
 			hasprefix="linux."
+			hassuffix=".gauge"
 	`
 }
 
