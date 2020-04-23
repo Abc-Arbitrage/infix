@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/logging"
@@ -109,6 +111,10 @@ func (cmd *Command) Run(args ...string) error {
 	}
 
 	if err := cmd.validate(); err != nil {
+		return err
+	}
+
+	if err := checkRoot(); err != nil {
 		return err
 	}
 
@@ -531,6 +537,25 @@ func (cmd *Command) filterRules(rules []rules.Rule, filterFn func(rules.Rule) bo
 		}
 	}
 	return
+}
+
+func checkRoot() error {
+	user, _ := user.Current()
+	if user != nil && user.Username == "root" {
+		warning := `You are currently running infix as root. This will write all your
+TSM and WAL files with root ownership and will be inacessible
+if you run influxd as a non-root user. You should run infix
+as the same user you are running influxd (eg sudo -u influxdb infix [...])
+`
+		fmt.Print(warning)
+		fmt.Print("Are you sure you want to continue? (yN): ")
+		var answer string
+		if fmt.Scanln(&answer); !strings.HasPrefix(strings.TrimSpace(strings.ToLower(answer)), "y") {
+			return fmt.Errorf("aborted by user")
+		}
+	}
+
+	return nil
 }
 
 func encodeWALEntry(entry tsm1.WALEntry) ([]byte, error) {
