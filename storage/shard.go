@@ -29,7 +29,7 @@ type ShardInfo struct {
 }
 
 // LoadShards load all shards in a data directory
-func LoadShards(dataDir string, walDir string, database string, retentionPolicy string) ([]ShardInfo, error) {
+func LoadShards(dataDir string, walDir string, database string, retentionPolicy string, shardFilter string) ([]ShardInfo, error) {
 	dbDirs, err := ioutil.ReadDir(dataDir)
 	var shards []ShardInfo
 	if err != nil {
@@ -73,6 +73,9 @@ func LoadShards(dataDir string, walDir string, database string, retentionPolicy 
 
 			for _, sh := range shardDirs {
 				if sh.Name() == _seriesFileDirectory {
+					continue
+				}
+				if shardFilter != "" && shardFilter != sh.Name() {
 					continue
 				}
 

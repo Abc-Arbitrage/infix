@@ -58,7 +58,6 @@ func (w *CachedTSMRewriter) Write(key []byte, values []tsm1.Value) error {
 
 	sz := w.cache.Size()
 	if sz > w.flushSizeThreshold {
-		log.Println("Flushing cache")
 		return w.WriteSnapshot()
 	}
 
@@ -67,6 +66,7 @@ func (w *CachedTSMRewriter) Write(key []byte, values []tsm1.Value) error {
 
 // WriteSnapshot will snapshot the cache and write a new TSM file with its content
 func (w *CachedTSMRewriter) WriteSnapshot() error {
+	log.Printf("snapshoting cache")
 	snapshot, err := w.cache.Snapshot()
 	if err != nil {
 		return err
@@ -96,12 +96,12 @@ func (w *CachedTSMRewriter) WriteSnapshot() error {
 	err = w.fileStore.ReplaceWithCallback(nil, newFiles, func(r []tsm1.TSMFile) {
 		// We need to keep track of written TSM files to trigger a full compaction later
 		for _, f := range r {
-			log.Printf("Wrote new TSM file '%s'\n", f.Path())
+			log.Printf("wrote new TSM file '%s'\n", f.Path())
 			w.tsmFiles = append(w.tsmFiles, f.Path())
 		}
 	})
 	if err != nil {
-		log.Println("Error adding new TSM files from snapshot. Removing temporary files.")
+		log.Println("error adding new TSM files from snapshot. Removing temporary files.")
 		for _, file := range newFiles {
 			if err := os.Remove(file); err != nil {
 				return err
@@ -117,7 +117,7 @@ func (w *CachedTSMRewriter) WriteSnapshot() error {
 // CompactFull implements Rewriter interface
 func (w *CachedTSMRewriter) CompactFull() ([]string, error) {
 	if len(w.tsmFiles) == 0 {
-		log.Println("Skipping full compaction. No TSM files have been written")
+		log.Println("skipping full compaction. No TSM files have been written")
 		return nil, nil
 	}
 
@@ -135,7 +135,7 @@ func (w *CachedTSMRewriter) CompactFull() ([]string, error) {
 	})
 
 	if err != nil {
-		log.Println("Error adding new TSM files from full compaction. Removing temporary files.")
+		log.Println("error adding new TSM files from full compaction. Removing temporary files.")
 		for _, file := range files {
 			if err := os.Remove(file); err != nil {
 				return nil, err

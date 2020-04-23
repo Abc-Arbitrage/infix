@@ -13,9 +13,6 @@ import (
 	"github.com/oktal/infix/storage"
 )
 
-// RenameFn defines a function to rename a measurement
-type RenameFn func(string) string
-
 // RenameMeasurementRule represents a rule to rename a measurement
 type RenameMeasurementRule struct {
 	filter filter.Filter

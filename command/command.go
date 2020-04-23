@@ -15,10 +15,16 @@ import (
 	"github.com/oktal/infix/logging"
 	"github.com/oktal/infix/rules"
 	"github.com/oktal/infix/storage"
+	"github.com/oktal/infix/utils/bytesize"
 
 	"github.com/golang/snappy"
 	"github.com/influxdata/influxdb/tsdb"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+)
+
+var (
+	defaultCacheMaxMemorySize      = bytesize.ByteSize(tsdb.DefaultCacheMaxMemorySize)
+	defaultCacheSnapshotMemorySize = bytesize.ByteSize(tsdb.DefaultCacheSnapshotMemorySize)
 )
 
 // Command represents the program execution for "influxd dumptsm".
@@ -32,9 +38,10 @@ type Command struct {
 	walDir          string
 	database        string
 	retentionPolicy string
+	shardFilter     string
 
-	maxCacheSize      uint64
-	cacheSnapshotSize uint64
+	maxCacheSize      bytesize.Flag
+	cacheSnapshotSize bytesize.Flag
 
 	verbose bool
 	check   bool
@@ -56,7 +63,6 @@ func NewCommand() *Command {
 
 // NewCommandWithRules returns a new instance of Command.
 func NewCommandWithRules(rs rules.Set) *Command {
-
 	return &Command{
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
@@ -72,14 +78,17 @@ func (cmd *Command) GlobalFilter(filter filter.Filter) {
 
 // Run executes the command.
 func (cmd *Command) Run(args ...string) error {
+	cmd.maxCacheSize.Default(defaultCacheMaxMemorySize)
+	cmd.cacheSnapshotSize.Default(defaultCacheSnapshotMemorySize)
+
 	fs := flag.NewFlagSet("file", flag.ExitOnError)
 	fs.StringVar(&cmd.dataDir, "datadir", "/var/lib/influxdb/data", "Path to data storage")
 	fs.StringVar(&cmd.walDir, "waldir", "/var/lib/influxdb/wal", "Path to WAL storage")
 	fs.StringVar(&cmd.database, "database", "", "The database to enforce")
 	fs.StringVar(&cmd.retentionPolicy, "retention", "", "The retention policy to enforce")
-	fs.Uint64Var(&cmd.maxCacheSize, "max-cache-size", tsdb.DefaultCacheMaxMemorySize, "The maximum in-memory cache size in bytes")
-	fs.Uint64Var(&cmd.cacheSnapshotSize, "cache-snapshot-size", tsdb.DefaultCacheSnapshotMemorySize,
-		"The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files.")
+	fs.StringVar(&cmd.shardFilter, "shard", "", "The id of the shard to fix")
+	fs.Var(&cmd.maxCacheSize, "max-cache-size", "The maximum in-memory cache size")
+	fs.Var(&cmd.cacheSnapshotSize, "cache-snapshot-size", "The size after which the cache will be snapshotted to disk when re-writing TSM files.")
 	fs.StringVar(&cmd.config, "config", "", "The configuration file for rules")
 	fs.BoolVar(&cmd.verbose, "v", false, "Enable verbose logging")
 	fs.BoolVar(&cmd.check, "check", false, "Run in check mode")
@@ -118,7 +127,7 @@ func (cmd *Command) Run(args ...string) error {
 		cmd.rules = append(cmd.rules, r)
 	}
 
-	shards, err := storage.LoadShards(cmd.dataDir, cmd.walDir, cmd.database, cmd.retentionPolicy)
+	shards, err := storage.LoadShards(cmd.dataDir, cmd.walDir, cmd.database, cmd.retentionPolicy, cmd.shardFilter)
 	if err != nil {
 		return err
 	}
@@ -140,10 +149,12 @@ Usage: infix [options]
         The database to fix
     -retention
         The retention policy to fix
+	-shard
+	    The id of the shard to fix
     -max-cache-size
-        The maximum in-memory cache size in bytes (defaults to %d)
+        The maximum in-memory cache size in bytes (defaults to %s)
     -cache-snapshot-size
-        The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files (defaults to %d)
+        The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files (defaults to %s)
     -v
         Enable verbose logging
     -check
@@ -152,7 +163,7 @@ Usage: infix [options]
         The configuration file
 `
 
-	fmt.Fprintf(cmd.Stdout, fmt.Sprintf(usage, tsdb.DefaultCacheMaxMemorySize, tsdb.DefaultCacheSnapshotMemorySize))
+	fmt.Fprintf(cmd.Stdout, fmt.Sprintf(usage, defaultCacheMaxMemorySize.HumanString(), defaultCacheSnapshotMemorySize.HumanString()))
 }
 
 func (cmd *Command) process(shards []storage.ShardInfo) error {
@@ -277,21 +288,20 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		}
 
 		for _, r := range writeRules {
-			newKey, newValues, err := r.Apply(key, values)
+			key, values, err = r.Apply(key, values)
 			if err != nil {
 				return err
 			}
 
-			if newKey != nil {
-				key = newKey
-			}
-			if newValues != nil {
-				values = newValues
+			if key == nil {
+				break
 			}
 		}
 
-		if err := w.Write(key, values); err != nil {
-			return err
+		if key != nil {
+			if err := w.Write(key, values); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -478,7 +488,7 @@ func (cmd *Command) createRewriter(tsmFilePath string) (storage.TSMRewriter, err
 	}
 
 	log.Printf("Creating cached TSM rewriter to directory '%s'", outputDir)
-	w := storage.NewCachedTSMRewriter(cmd.maxCacheSize, cmd.cacheSnapshotSize, outputDir)
+	w := storage.NewCachedTSMRewriter(cmd.maxCacheSize.Size().UInt64(), cmd.cacheSnapshotSize.Size().UInt64(), outputDir)
 	return w, nil
 }
 

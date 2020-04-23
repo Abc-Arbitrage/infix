@@ -5,6 +5,9 @@ import (
 	"github.com/oktal/infix/storage"
 )
 
+// RenameFn defines a function to rename a measurement or field
+type RenameFn func(string) string
+
 const (
 	// TSMReadOnly is a flag for rules that should be read only for TSM files
 	TSMReadOnly = 1
