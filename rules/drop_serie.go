@@ -25,8 +25,8 @@ type DropSerieRule struct {
 	shardTotal uint64
 }
 
-// DropSerieRuleConfiguration represents the toml configuration for DropSerieRule
-type DropSerieRuleConfiguration struct {
+// DropSerieRuleConfig represents the toml configuration for DropSerieRule
+type DropSerieRuleConfig struct {
 	DropFilter filter.Filter
 }
 
@@ -119,7 +119,7 @@ func (r *DropSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 }
 
 // Sample implements the Config interface
-func (c *DropSerieRuleConfiguration) Sample() string {
+func (c *DropSerieRuleConfig) Sample() string {
 	return `
 		[[rules.drop-serie]]
 			[rules.drop-serie.dropFilter.serie]
@@ -134,6 +134,6 @@ func (c *DropSerieRuleConfiguration) Sample() string {
 }
 
 // Build implements the Config interface
-func (c *DropSerieRuleConfiguration) Build() (Rule, error) {
+func (c *DropSerieRuleConfig) Build() (Rule, error) {
 	return NewDropSerieRule(filter.NewRawSerieFilter(c.DropFilter)), nil
 }

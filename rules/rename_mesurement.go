@@ -25,8 +25,8 @@ type RenameMeasurementRule struct {
 	logger *log.Logger
 }
 
-// RenameMeasurementConfig represents the toml configuration for RenameMeasurementRule
-type RenameMeasurementConfig struct {
+// RenameMeasurementRuleConfig represents the toml configuration for RenameMeasurementRule
+type RenameMeasurementRuleConfig struct {
 	From filter.Filter
 	To   string
 }
@@ -173,7 +173,7 @@ func (r *RenameMeasurementRule) Count() int {
 }
 
 // Sample implements Config interface
-func (c *RenameMeasurementConfig) Sample() string {
+func (c *RenameMeasurementRuleConfig) Sample() string {
 	return `
         to="linux.$1"
         [from.pattern]
@@ -182,7 +182,7 @@ func (c *RenameMeasurementConfig) Sample() string {
 }
 
 // Build implements Config interface
-func (c *RenameMeasurementConfig) Build() (Rule, error) {
+func (c *RenameMeasurementRuleConfig) Build() (Rule, error) {
 	var renameFn RenameFn
 
 	patternFilter, ok := c.From.(*filter.PatternFilter)

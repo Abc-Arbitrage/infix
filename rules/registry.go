@@ -6,7 +6,7 @@ import (
 
 func init() {
 	RegisterRule("rename-measurement", func() Config {
-		return &RenameMeasurementConfig{}
+		return &RenameMeasurementRuleConfig{}
 	})
 	RegisterRule("drop-measurement", func() Config {
 		return &DropMeasurementRuleConfig{}
@@ -15,7 +15,7 @@ func init() {
 		return &OldSerieRuleConfig{}
 	})
 	RegisterRule("drop-serie", func() Config {
-		return &DropSerieRuleConfiguration{}
+		return &DropSerieRuleConfig{}
 	})
 	RegisterRule("rename-field", func() Config {
 		return &RenameFieldRuleConfig{}

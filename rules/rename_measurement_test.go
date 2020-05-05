@@ -13,7 +13,7 @@ import (
 )
 
 func TestRenameMeasurement_ShouldBuildFromSample(t *testing.T) {
-	config := &RenameMeasurementConfig{}
+	config := &RenameMeasurementRuleConfig{}
 
 	table, err := toml.Parse([]byte(config.Sample()))
 	assert.NoError(t, err)
