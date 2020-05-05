@@ -4,14 +4,28 @@ import (
 	"testing"
 
 	"github.com/influxdata/influxql"
-
-	"github.com/oktal/infix/storage"
+	"github.com/naoina/toml"
+	"github.com/oktal/infix/filter"
 
 	"github.com/influxdata/influxdb/models"
-	"github.com/influxdata/influxdb/tsdb"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestRenameMeasurement_ShouldBuildFromSample(t *testing.T) {
+	config := &RenameMeasurementConfig{}
+
+	table, err := toml.Parse([]byte(config.Sample()))
+	assert.NoError(t, err)
+	assert.NotNil(t, table)
+
+	err = filter.UnmarshalConfig(table, config)
+	assert.NoError(t, err)
+
+	rule, err := config.Build()
+	assert.NoError(t, err)
+	assert.NotNil(t, rule)
+}
 
 func TestRenameMeasurement_ShouldApplyAndRename(t *testing.T) {
 	rule := NewRenameMeasurement("cpu", "linux.cpu")
@@ -135,31 +149,4 @@ func TestRenameMeasurement_ShouldUpdateFieldsIndex(t *testing.T) {
 	}
 
 	assert.Equal(t, rule.Count(), 0)
-}
-
-type measurementFields struct {
-	measurement string
-	fields      map[string]influxql.DataType
-}
-
-func newTestShard(measurements []measurementFields) storage.ShardInfo {
-	index, err := tsdb.NewMeasurementFieldSet("path")
-	if err != nil {
-		panic(err)
-	}
-
-	for _, m := range measurements {
-		measurementFields := index.CreateFieldsIfNotExists([]byte(m.measurement))
-		for key, iflxType := range m.fields {
-			measurementFields.CreateFieldIfNotExists([]byte(key), iflxType)
-		}
-	}
-
-	return storage.ShardInfo{
-		ID:              12,
-		Database:        "test_db",
-		RetentionPolicy: "test_rp",
-		Path:            "/var/lib/influxdb/data/test_db/test_rp/12",
-		FieldsIndex:     index,
-	}
 }

@@ -175,10 +175,9 @@ func (r *RenameMeasurementRule) Count() int {
 // Sample implements Config interface
 func (c *RenameMeasurementConfig) Sample() string {
 	return `
-    [[rules.rename-measurement]]
-        [rules.rename-measurement.from.pattern]
-            pattern="^(cpu|disk)$"
         to="linux.$1"
+        [from.pattern]
+            pattern="^(cpu|disk)$"
     `
 }
 
