@@ -17,6 +17,9 @@ func init() {
 	RegisterRule("drop-serie", func() Config {
 		return &DropSerieRuleConfiguration{}
 	})
+	RegisterRule("rename-field", func() Config {
+		return &RenameFieldRuleConfig{}
+	})
 }
 
 // NewRuleFunc represents a callback to register a rule's configuration to be able to load it from toml
