@@ -196,6 +196,15 @@ type SerieFilter struct {
 	fieldFilter       Filter
 }
 
+// NewSerieFilter creates a new SerieFilter
+func NewSerieFilter(measurementFilter Filter, tagsFilter Filter, fieldFilter Filter) *SerieFilter {
+	return &SerieFilter{
+		measurementFilter: measurementFilter,
+		tagsFilter:        tagsFilter,
+		fieldFilter:       fieldFilter,
+	}
+}
+
 // SerieFilterConfig represents the toml configuration of a SerieFilter
 type SerieFilterConfig struct {
 	Measurement Filter
