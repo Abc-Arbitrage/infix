@@ -13,8 +13,8 @@ import (
 	"github.com/oktal/infix/storage"
 )
 
-// UpdateMeasurementFieldTypeRule will update a field type for a given measurement
-type UpdateMeasurementFieldTypeRule struct {
+// UpdateFieldTypeRule will update a field type for a given measurement
+type UpdateFieldTypeRule struct {
 	check       bool
 	measurement string
 	fieldKey    string
@@ -27,52 +27,52 @@ type UpdateMeasurementFieldTypeRule struct {
 	logger *log.Logger
 }
 
-// NewUpdateMeasurementFieldType creates an UpdateMeasurementFieldTypeRule
-func NewUpdateMeasurementFieldType(measurement string, fieldKey string, fromType influxql.DataType, toType influxql.DataType) *UpdateMeasurementFieldTypeRule {
-	return &UpdateMeasurementFieldTypeRule{
+// NewUpdateMeasurementFieldType creates an UpdateFieldTypeRule
+func NewUpdateMeasurementFieldType(measurement string, fieldKey string, fromType influxql.DataType, toType influxql.DataType) *UpdateFieldTypeRule {
+	return &UpdateFieldTypeRule{
 		measurement: measurement,
 		fieldKey:    fieldKey,
 		fromType:    fromType,
 		toType:      toType,
 		count:       0,
-		logger:      logging.GetLogger("UpdateMeasurementFieldTypeRule"),
+		logger:      logging.GetLogger("UpdateFieldTypeRule"),
 	}
 }
 
 // CheckMode sets the check mode on the rule
-func (r *UpdateMeasurementFieldTypeRule) CheckMode(check bool) {
+func (r *UpdateFieldTypeRule) CheckMode(check bool) {
 	r.check = check
 }
 
 // Flags implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) Flags() int {
+func (r *UpdateFieldTypeRule) Flags() int {
 	return Standard
 }
 
 // WithLogger sets the logger on the rule
-func (r *UpdateMeasurementFieldTypeRule) WithLogger(logger *log.Logger) {
+func (r *UpdateFieldTypeRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
 }
 
 // Start implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) Start() {
+func (r *UpdateFieldTypeRule) Start() {
 
 }
 
 // End implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) End() {
+func (r *UpdateFieldTypeRule) End() {
 
 }
 
 // StartShard implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartShard(info storage.ShardInfo) bool {
+func (r *UpdateFieldTypeRule) StartShard(info storage.ShardInfo) bool {
 	r.shard = info
 	r.count = 0
 	return true
 }
 
 // EndShard implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) EndShard() error {
+func (r *UpdateFieldTypeRule) EndShard() error {
 	if r.count > 0 {
 		shard := r.shard
 		if shard.FieldsIndex == nil {
@@ -103,25 +103,25 @@ func (r *UpdateMeasurementFieldTypeRule) EndShard() error {
 }
 
 // StartTSM implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartTSM(path string) bool {
+func (r *UpdateFieldTypeRule) StartTSM(path string) bool {
 	return true
 }
 
 // EndTSM implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) EndTSM() {
+func (r *UpdateFieldTypeRule) EndTSM() {
 }
 
 // StartWAL implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) StartWAL(path string) bool {
+func (r *UpdateFieldTypeRule) StartWAL(path string) bool {
 	return true
 }
 
 // EndWAL implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) EndWAL() {
+func (r *UpdateFieldTypeRule) EndWAL() {
 }
 
 // Apply implements Rule interface
-func (r *UpdateMeasurementFieldTypeRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
+func (r *UpdateFieldTypeRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
 	series, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
 	measurement, _ := models.ParseKey(series)
 
