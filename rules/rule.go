@@ -1,12 +1,20 @@
 package rules
 
 import (
+	"errors"
+
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/oktal/infix/storage"
 )
 
 // RenameFn defines a function to rename a measurement or field
 type RenameFn func(string) string
+
+// ErrMissingMeasurementFilter is raised when a config is missing a measurement filter
+var ErrMissingMeasurementFilter = errors.New("missing measurement filter")
+
+// ErrMissingFieldFilter is raised when a config is missing a field filter
+var ErrMissingFieldFilter = errors.New("missing field filter")
 
 const (
 	// TSMReadOnly is a flag for rules that should be read only for TSM files

@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -13,12 +12,6 @@ import (
 	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/storage"
 )
-
-// ErrMissingMeasurementFilter is raised when a config is missing a measurement filter
-var ErrMissingMeasurementFilter = errors.New("missing measurement filter")
-
-// ErrMissingFieldFilter is raised when a config is missing a field filter
-var ErrMissingFieldFilter = errors.New("missing field filter")
 
 type fieldRename struct {
 	oldKey string

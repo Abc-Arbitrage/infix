@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,6 +14,9 @@ import (
 	"github.com/oktal/infix/logging"
 	"github.com/oktal/infix/storage"
 )
+
+// ErrUnknownType is raised when failing to parse an InfluxQL Type
+var ErrUnknownType = errors.New("unknown InfluxQL type")
 
 // UpdateFieldTypeRule will update a field type for a given measurement
 type UpdateFieldTypeRule struct {
@@ -103,7 +107,7 @@ func (r *UpdateFieldTypeRule) EndShard() error {
 					return fmt.Errorf("Could not find field. ShardId: %d Measurement: %s Field: %s", shard.ID, m, f)
 				}
 
-				if field.Type != r.fromType {
+				if field.Type != r.toType {
 					r.logger.Printf("Converting type of field '%s' measurement '%s' from '%s' to '%s'", f, m, r.fromType, r.toType)
 					field.Type = r.toType
 				}
@@ -202,12 +206,20 @@ func (c *UpdateFieldTypeRuleConfig) Sample() string {
 func (c *UpdateFieldTypeRuleConfig) Build() (Rule, error) {
 	fromType := influxql.DataTypeFromString(c.FromType)
 	if fromType == influxql.Unknown {
-		return nil, fmt.Errorf("Unknown FromType '%s'", c.FromType)
+		return nil, ErrUnknownType
 	}
 
 	toType := influxql.DataTypeFromString(c.ToType)
 	if toType == influxql.Unknown {
-		return nil, fmt.Errorf("Unknown ToType '%s'", c.ToType)
+		return nil, ErrUnknownType
+	}
+
+	if c.Measurement == nil {
+		return nil, ErrMissingMeasurementFilter
+	}
+
+	if c.Field == nil {
+		return nil, ErrMissingFieldFilter
 	}
 
 	return NewUpdateFieldType(c.Measurement, c.Field, fromType, toType), nil

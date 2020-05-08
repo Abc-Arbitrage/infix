@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/influxql"
 
+	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/oktal/infix/filter"
 
@@ -16,36 +17,67 @@ func TestUpdateFieldType_ShouldBuildFromSample(t *testing.T) {
 	assertBuildFromSample(t, &UpdateFieldTypeRuleConfig{})
 }
 
-func TestUpdateFieldType_ShouldBuildFailInvalidFromType(t *testing.T) {
-	config := `
-		 fromType="char"
-		 toType="integer"
-		 [measurement.strings]
-			equal="cpu"
-		 [field.pattern]
-		 	pattern="^(idle|active)"
-	`
+func TestUpdateFieldType_ShouldBuildFail(t *testing.T) {
+	data := []struct {
+		name string
 
-	assertBuildFromStringCallback(t, config, &UpdateFieldTypeRuleConfig{}, func(r Rule, err error) {
-		assert.Nil(t, r)
-		assert.EqualError(t, err, "Unknown FromType 'char'")
-	})
-}
+		config        string
+		expectedError error
+	}{
+		{
+			"unknown FromType",
+			`
+				fromType="char"
+				toType="integer"
+				[measurement.strings]
+					equal="cpu"
+				[field.pattern]
+					pattern="^(idle|active)"
+			`,
+			ErrUnknownType,
+		},
+		{
+			"unknown ToType",
+			`
+				fromType="integer"
+				toType="char"
+				[measurement.strings]
+					equal="cpu"
+				[field.pattern]
+					pattern="^(idle|active)"
+			`,
+			ErrUnknownType,
+		},
+		{
+			"missing measurement filter",
+			`
+				fromType="integer"
+				toType="float"
+				[field.pattern]
+					pattern="^(idle|active)"
+			`,
+			ErrMissingMeasurementFilter,
+		},
+		{
+			"missing field filter",
+			`
+				fromType="integer"
+				toType="float"
+				[measurement.strings]
+					equal="cpu"
+			`,
+			ErrMissingFieldFilter,
+		},
+	}
 
-func TestUpdateFieldType_ShouldBuildFailInvalidToType(t *testing.T) {
-	config := `
-		 fromType="integer"
-		 toType="char"
-		 [measurement.strings]
-			equal="cpu"
-		 [field.pattern]
-		 	pattern="^(idle|active)"
-	`
-
-	assertBuildFromStringCallback(t, config, &UpdateFieldTypeRuleConfig{}, func(r Rule, err error) {
-		assert.Nil(t, r)
-		assert.EqualError(t, err, "Unknown ToType 'char'")
-	})
+	for _, d := range data {
+		t.Run(d.name, func(t *testing.T) {
+			assertBuildFromStringCallback(t, d.config, &UpdateFieldTypeRuleConfig{}, func(r Rule, err error) {
+				assert.Nil(t, r)
+				assert.Equal(t, err, d.expectedError)
+			})
+		})
+	}
 }
 
 func TestUpdateFieldType_ShouldApply(t *testing.T) {
@@ -381,6 +413,122 @@ func TestUpdateFieldType_ShouldApply(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestUpdateFieldType_ShouldUpdateFieldsIndex(t *testing.T) {
+	measurements := []measurementFields{
+		{
+			"memory_bytes.gauge",
+			map[string]influxql.DataType{
+				"value": influxql.Integer,
+			},
+		},
+		{
+			"node_up.gauge",
+			map[string]influxql.DataType{
+				"value": influxql.Boolean,
+			},
+		},
+		{
+			"interrupts.counter",
+			map[string]influxql.DataType{
+				"value": influxql.Integer,
+			},
+		},
+	}
+
+	shard := newTestShard(measurements)
+
+	measurementFilter, err := filter.NewStringFilter(&filter.StringFilterConfig{HasSuffix: "gauge"})
+	assert.NoError(t, err)
+	fieldFilter, err := filter.NewStringFilter(&filter.StringFilterConfig{Equal: "value"})
+	assert.NoError(t, err)
+
+	rule := NewUpdateFieldType(measurementFilter, fieldFilter, influxql.Integer, influxql.Float)
+
+	key := func(serie string, field string) []byte {
+		return tsm1.SeriesFieldKeyBytes(serie, field)
+	}
+
+	intVal := func(ts int64, v int64) tsm1.Value {
+		return tsm1.NewIntegerValue(ts, v)
+	}
+
+	floatVal := func(ts int64, v float64) tsm1.Value {
+		return tsm1.NewFloatValue(ts, v)
+	}
+
+	boolVal := func(ts int64, v bool) tsm1.Value {
+		return tsm1.NewBooleanValue(ts, v)
+	}
+
+	data := []struct {
+		name string
+
+		key []byte
+
+		values         []tsm1.Value
+		expectedValues []tsm1.Value
+
+		expectedType influxql.DataType
+	}{
+		{
+			"update type to float",
+
+			key("memory_bytes.gauge,host=my-host1", "value"),
+			[]tsm1.Value{intVal(0, 10), intVal(1, 15)},
+			[]tsm1.Value{floatVal(0, 10), floatVal(1, 15)},
+
+			influxql.Float,
+		},
+		{
+			"keep boolean type",
+
+			key("node_up.gauge,node_id=node01", "value"),
+			[]tsm1.Value{boolVal(0, true), boolVal(1, true)},
+			[]tsm1.Value{boolVal(0, true), boolVal(1, true)},
+
+			influxql.Boolean,
+		},
+		{
+			"keep integer type",
+
+			key("interrupts.counter,interrupt_id=13", "value"),
+			[]tsm1.Value{intVal(0, 20), intVal(1, 33)},
+			[]tsm1.Value{intVal(0, 20), intVal(1, 33)},
+
+			influxql.Integer,
+		},
+	}
+
+	rule.Start()
+
+	rule.CheckMode(false)
+	rule.StartShard(shard)
+
+	for _, d := range data {
+		_, values, err := rule.Apply(d.key, d.values)
+		assert.NoError(t, err)
+		assert.Equal(t, values, d.expectedValues)
+	}
+
+	err = rule.EndShard()
+	assert.NoError(t, err)
+	rule.End()
+
+	for _, d := range data {
+		t.Run(d.name, func(t *testing.T) {
+			seriesKey, fieldKey := tsm1.SeriesAndFieldFromCompositeKey(d.key)
+			measurement, _ := models.ParseKeyBytes(seriesKey)
+
+			fields := shard.FieldsIndex.Fields(measurement)
+			assert.NotNil(t, fields)
+
+			field := fields.FieldBytes(fieldKey)
+			assert.NotNil(t, field)
+			assert.Equalf(t, field.Type, d.expectedType, "expected type '%s' got '%s'", d.expectedType, field.Type)
 		})
 	}
 }
