@@ -20,6 +20,10 @@ func (w *captureWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func TestOldSerie_ShouldBuildFromSample(t *testing.T) {
+	assertBuildFromSample(t, &OldSerieRuleConfig{})
+}
+
 func TestOldSerie_ShouldDetectAndWriteOldSerie(t *testing.T) {
 	ts := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
 

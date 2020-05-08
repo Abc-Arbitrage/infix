@@ -1,14 +1,38 @@
 package rules
 
 import (
+	"testing"
+
 	"github.com/influxdata/influxdb/tsdb"
 	"github.com/influxdata/influxql"
+	"github.com/naoina/toml"
+	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 type measurementFields struct {
 	measurement string
 	fields      map[string]influxql.DataType
+}
+
+func assertBuildFromSample(t *testing.T, config Config) {
+	assertBuildFromStringCallback(t, config.Sample(), config, func(r Rule, err error) {
+		assert.NoError(t, err)
+		assert.NotNil(t, r)
+	})
+}
+
+func assertBuildFromStringCallback(t *testing.T, tomlConfig string, config Config, callback func(r Rule, err error)) {
+	table, err := toml.Parse([]byte(tomlConfig))
+	assert.NoError(t, err)
+	assert.NotNil(t, table)
+
+	err = filter.UnmarshalConfig(table, config)
+	assert.NoError(t, err)
+
+	rule, err := config.Build()
+	callback(rule, err)
 }
 
 func newTestShard(measurements []measurementFields) storage.ShardInfo {

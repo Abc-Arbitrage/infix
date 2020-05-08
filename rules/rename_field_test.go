@@ -7,49 +7,59 @@ import (
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/influxdata/influxql"
 
-	"github.com/naoina/toml"
 	"github.com/oktal/infix/filter"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRenameField_ShouldBuildFromSample(t *testing.T) {
-	config := &RenameFieldRuleConfig{}
-
-	table, err := toml.Parse([]byte(config.Sample()))
-	assert.NoError(t, err)
-	assert.NotNil(t, table)
-
-	err = filter.UnmarshalConfig(table, config)
-	assert.NoError(t, err)
-
-	rule, err := config.Build()
-	assert.NoError(t, err)
-	assert.NotNil(t, rule)
+	assertBuildFromSample(t, &RenameFieldRuleConfig{})
 }
 
 func TestRenameField_ShouldBuildFail(t *testing.T) {
-	config1 := &RenameFieldRuleConfig{}
-	config2 := &RenameFieldRuleConfig{}
-	config3 := &RenameFieldRuleConfig{}
+	data := []struct {
+		name string
 
-	check := func(config *RenameFieldRuleConfig) {
-		r, err := config.Build()
-		assert.Error(t, err)
-		assert.Nil(t, r)
+		config        string
+		expectedError error
+	}{
+		{
+			"missing measurement and field filter",
+
+			`
+			 to="agg_5m_${1}_${2}"
+			 `,
+			ErrMissingMeasurementFilter,
+		},
+		{
+			"missing measurement filter",
+
+			`
+			 to="agg_5m_${1}_${2}"
+			 [field.pattern]
+				pattern="(.+)_(avg|sum)"
+			 `,
+			ErrMissingMeasurementFilter,
+		},
+		{
+			"missing field filter",
+
+			`
+			 to="agg_5m_${1}_${2}"
+			 [measurement.strings]
+				hasprefix="linux."
+			 `,
+			ErrMissingFieldFilter,
+		},
 	}
 
-	config1.Measurement = nil
-	config1.Field = nil
-
-	config2.Measurement = filter.NewIncludeFilter([]string{"cpu"})
-	config2.Field = nil
-
-	config3.Measurement = nil
-	config3.Field = filter.NewIncludeFilter([]string{"idle_avg"})
-
-	check(config1)
-	check(config2)
-	check(config3)
+	for _, d := range data {
+		t.Run(d.name, func(t *testing.T) {
+			assertBuildFromStringCallback(t, d.config, &RenameFieldRuleConfig{}, func(r Rule, err error) {
+				assert.Nil(t, r)
+				assert.Equal(t, err, d.expectedError)
+			})
+		})
+	}
 }
 
 func TestRenameField_ShouldApplyAndRename(t *testing.T) {

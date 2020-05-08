@@ -8,7 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDropMeasurement_ShouldDrop(t *testing.T) {
+func TestDropMeasurement_ShouldBuildFromSample(t *testing.T) {
+	assertBuildFromSample(t, &DropMeasurementRuleConfig{})
+}
+
+func TestDropMeasurement_ShouldApply(t *testing.T) {
 	rule := NewDropMeasurement("cpu")
 
 	var tags = map[string]string{

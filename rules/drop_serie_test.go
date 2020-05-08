@@ -5,24 +5,12 @@ import (
 
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 
-	"github.com/naoina/toml"
 	"github.com/oktal/infix/filter"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDropSerie_ShouldBuildFromSample(t *testing.T) {
-	config := &DropSerieRuleConfig{}
-
-	table, err := toml.Parse([]byte(config.Sample()))
-	assert.NoError(t, err)
-	assert.NotNil(t, table)
-
-	err = filter.UnmarshalConfig(table, config)
-	assert.NoError(t, err)
-
-	rule, err := config.Build()
-	assert.NoError(t, err)
-	assert.NotNil(t, rule)
+	assertBuildFromSample(t, &DropSerieRuleConfig{})
 }
 
 func TestDropSerie_ShouldApplyAndDrop(t *testing.T) {

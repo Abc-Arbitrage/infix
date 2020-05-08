@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/influxql"
-	"github.com/naoina/toml"
-	"github.com/oktal/infix/filter"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
@@ -13,18 +11,41 @@ import (
 )
 
 func TestRenameMeasurement_ShouldBuildFromSample(t *testing.T) {
-	config := &RenameMeasurementRuleConfig{}
+	assertBuildFromSample(t, &RenameMeasurementRuleConfig{})
+}
 
-	table, err := toml.Parse([]byte(config.Sample()))
-	assert.NoError(t, err)
-	assert.NotNil(t, table)
+func TestRenameMeasurement_ShouldBuilFail(t *testing.T) {
+	data := []struct {
+		name string
 
-	err = filter.UnmarshalConfig(table, config)
-	assert.NoError(t, err)
+		config        string
+		expectedError error
+	}{
+		{
+			"missing from filter",
+			`
+			to="linux.cpu"
+			`,
+			ErrMissingFromFilter,
+		},
+		{
+			"missing to",
+			`
+			[from.pattern]
+				pattern="^(cpu|disk)$"
+			`,
+			ErrMissingRenameTo,
+		},
+	}
 
-	rule, err := config.Build()
-	assert.NoError(t, err)
-	assert.NotNil(t, rule)
+	for _, d := range data {
+		t.Run(d.name, func(t *testing.T) {
+			assertBuildFromStringCallback(t, d.config, &RenameMeasurementRuleConfig{}, func(r Rule, err error) {
+				assert.Nil(t, r)
+				assert.Equal(t, err, d.expectedError)
+			})
+		})
+	}
 }
 
 func TestRenameMeasurement_ShouldApplyAndRename(t *testing.T) {

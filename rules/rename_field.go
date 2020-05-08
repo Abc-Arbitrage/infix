@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -12,6 +13,12 @@ import (
 	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/storage"
 )
+
+// ErrMissingMeasurementFilter is raised when a config is missing a measurement filter
+var ErrMissingMeasurementFilter = errors.New("missing measurement filter")
+
+// ErrMissingFieldFilter is raised when a config is missing a field filter
+var ErrMissingFieldFilter = errors.New("missing field filter")
 
 type fieldRename struct {
 	oldKey string
@@ -160,7 +167,21 @@ func (r *RenameFieldRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1
 		newField := r.renameFn(string(field))
 		r.logger.Printf("Renaming field '%s' to '%s' for measurement %s", field, newField, measurement)
 		rename := fieldRename{oldKey: string(field), newKey: newField}
-		r.renamed[measurement] = append(r.renamed[measurement], rename)
+		if renames, ok := r.renamed[measurement]; !ok {
+			r.renamed[measurement] = append(r.renamed[measurement], rename)
+		} else {
+			found := false
+			for _, r := range renames {
+				if r.oldKey == rename.oldKey {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				r.renamed[measurement] = append(r.renamed[measurement], rename)
+			}
+		}
 
 		newKey := tsm1.SeriesFieldKeyBytes(string(seriesKey), newField)
 		return newKey, values, nil
@@ -183,10 +204,10 @@ func (c *RenameFieldRuleConfig) Sample() string {
 // Build implements Config interface
 func (c *RenameFieldRuleConfig) Build() (Rule, error) {
 	if c.Measurement == nil {
-		return nil, fmt.Errorf("missing measurement filter")
+		return nil, ErrMissingMeasurementFilter
 	}
 	if c.Field == nil {
-		return nil, fmt.Errorf("missing field filter")
+		return nil, ErrMissingFieldFilter
 	}
 
 	patternFilter, ok := c.Measurement.(*filter.PatternFilter)

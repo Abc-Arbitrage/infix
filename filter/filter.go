@@ -385,54 +385,46 @@ type StringFilterConfig struct {
 	HasSuffix   string
 }
 
-// Sample implements Config interface
-func (c *StringFilterConfig) Sample() string {
-	return `
-		hasprefix="linux."
-		hassuffix=".gauge"
-	`
-}
-
-// Build implements Config interface
-func (c *StringFilterConfig) Build() (Filter, error) {
+// NewStringFilter creates a new StringFilter
+func NewStringFilter(config *StringFilterConfig) (Filter, error) {
 	type filterFn func(key []byte) bool
 
 	var filterFns []filterFn
 
 	count := 0
-	if c.Contains != "" {
+	if config.Contains != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return strings.Contains(string(key), c.Contains)
+			return strings.Contains(string(key), config.Contains)
 		})
 		count++
 	}
-	if c.ContainsAny != "" {
+	if config.ContainsAny != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return strings.ContainsAny(string(key), c.ContainsAny)
+			return strings.ContainsAny(string(key), config.ContainsAny)
 		})
 		count++
 	}
-	if c.Equal != "" {
+	if config.Equal != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return string(key) == c.Equal
+			return string(key) == config.Equal
 		})
 		count++
 	}
-	if c.EqualFold != "" {
+	if config.EqualFold != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return strings.EqualFold(string(key), c.EqualFold)
+			return strings.EqualFold(string(key), config.EqualFold)
 		})
 		count++
 	}
-	if c.HasPrefix != "" {
+	if config.HasPrefix != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return strings.HasPrefix(string(key), c.HasPrefix)
+			return strings.HasPrefix(string(key), config.HasPrefix)
 		})
 		count++
 	}
-	if c.HasSuffix != "" {
+	if config.HasSuffix != "" {
 		filterFns = append(filterFns, func(key []byte) bool {
-			return strings.HasSuffix(string(key), c.HasSuffix)
+			return strings.HasSuffix(string(key), config.HasSuffix)
 		})
 		count++
 	}
@@ -454,4 +446,17 @@ func (c *StringFilterConfig) Build() (Filter, error) {
 		filterFn: fn,
 	}
 	return f, nil
+}
+
+// Sample implements Config interface
+func (c *StringFilterConfig) Sample() string {
+	return `
+		hasprefix="linux."
+		hassuffix=".gauge"
+	`
+}
+
+// Build implements Config interface
+func (c *StringFilterConfig) Build() (Filter, error) {
+	return NewStringFilter(c)
 }

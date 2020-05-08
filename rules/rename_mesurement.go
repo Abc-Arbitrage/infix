@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -12,6 +13,12 @@ import (
 
 	"github.com/oktal/infix/storage"
 )
+
+// ErrMissingFromFilter is raised when a config is missing from filter
+var ErrMissingFromFilter = errors.New("missing from filter")
+
+// ErrMissingRenameTo is raised when a config is missing to
+var ErrMissingRenameTo = errors.New("missing rename 'to'")
 
 // RenameMeasurementRule represents a rule to rename a measurement
 type RenameMeasurementRule struct {
@@ -183,6 +190,13 @@ func (c *RenameMeasurementRuleConfig) Sample() string {
 
 // Build implements Config interface
 func (c *RenameMeasurementRuleConfig) Build() (Rule, error) {
+	if c.From == nil {
+		return nil, ErrMissingFromFilter
+	}
+	if c.To == "" {
+		return nil, ErrMissingRenameTo
+	}
+
 	var renameFn RenameFn
 
 	patternFilter, ok := c.From.(*filter.PatternFilter)

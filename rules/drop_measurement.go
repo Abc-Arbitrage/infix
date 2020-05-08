@@ -148,9 +148,8 @@ func (r *DropMeasurementRule) Count() int {
 // Sample implements Config interface
 func (c *DropMeasurementRuleConfig) Sample() string {
 	return `
-    [[rules.drop-measurement]]
-        [rules.rename-measurement.dropFilter.pattern]
-            pattern="^linux\..*"
+	[dropFilter.strings]
+		hasprefix="linux."
     `
 }
 

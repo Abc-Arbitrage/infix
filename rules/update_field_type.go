@@ -9,33 +9,45 @@ import (
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/influxdata/influxql"
 
+	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/logging"
 	"github.com/oktal/infix/storage"
 )
 
 // UpdateFieldTypeRule will update a field type for a given measurement
 type UpdateFieldTypeRule struct {
-	check       bool
-	measurement string
-	fieldKey    string
-	fromType    influxql.DataType
-	toType      influxql.DataType
-
+	check bool
 	shard storage.ShardInfo
-	count uint64
+
+	measurementFilter filter.Filter
+	fieldFilter       filter.Filter
+
+	fromType influxql.DataType
+	toType   influxql.DataType
+
+	updates map[string][]string
 
 	logger *log.Logger
 }
 
-// NewUpdateMeasurementFieldType creates an UpdateFieldTypeRule
-func NewUpdateMeasurementFieldType(measurement string, fieldKey string, fromType influxql.DataType, toType influxql.DataType) *UpdateFieldTypeRule {
+// UpdateFieldTypeRuleConfig represents the toml configuration for UpdateFieldTypeRule
+type UpdateFieldTypeRuleConfig struct {
+	Measurement filter.Filter
+	Field       filter.Filter
+
+	FromType string
+	ToType   string
+}
+
+// NewUpdateFieldType creates an UpdateFieldTypeRule
+func NewUpdateFieldType(measurementFilter filter.Filter, fieldFilter filter.Filter, fromType influxql.DataType, toType influxql.DataType) *UpdateFieldTypeRule {
 	return &UpdateFieldTypeRule{
-		measurement: measurement,
-		fieldKey:    fieldKey,
-		fromType:    fromType,
-		toType:      toType,
-		count:       0,
-		logger:      logging.GetLogger("UpdateFieldTypeRule"),
+		measurementFilter: measurementFilter,
+		fieldFilter:       fieldFilter,
+		fromType:          fromType,
+		toType:            toType,
+		updates:           make(map[string][]string),
+		logger:            logging.GetLogger("UpdateFieldTypeRule"),
 	}
 }
 
@@ -67,31 +79,36 @@ func (r *UpdateFieldTypeRule) End() {
 // StartShard implements Rule interface
 func (r *UpdateFieldTypeRule) StartShard(info storage.ShardInfo) bool {
 	r.shard = info
-	r.count = 0
+	r.updates = make(map[string][]string)
 	return true
 }
 
 // EndShard implements Rule interface
 func (r *UpdateFieldTypeRule) EndShard() error {
-	if r.count > 0 {
+	if len(r.updates) > 0 {
 		shard := r.shard
 		if shard.FieldsIndex == nil {
 			return fmt.Errorf("No index for shard id %d", r.shard.ID)
 		}
 
-		fields := shard.FieldsIndex.FieldsByString(r.measurement)
-		if fields == nil {
-			return fmt.Errorf("Could not find fields. SharId: %d Measurement %s", shard.ID, r.measurement)
-		}
+		for m, updates := range r.updates {
+			fields := shard.FieldsIndex.FieldsByString(m)
+			if fields == nil {
+				return fmt.Errorf("Could not find fields. ShardId: %d Measurement: %s", shard.ID, m)
+			}
 
-		field := fields.Field(r.fieldKey)
-		if field == nil {
-			return fmt.Errorf("Could not find field. ShardId: %d Measurement %s Field %s", shard.ID, r.measurement, r.fieldKey)
-		}
+			for _, f := range updates {
+				field := fields.Field(f)
+				if field == nil {
+					return fmt.Errorf("Could not find field. ShardId: %d Measurement: %s Field: %s", shard.ID, m, f)
+				}
 
-		if field.Type != r.fromType {
-			r.logger.Printf("Converting type of field '%s' measurement '%s' from '%s' to '%s'", r.fieldKey, r.measurement, r.fromType, r.toType)
-			field.Type = r.toType
+				if field.Type != r.fromType {
+					r.logger.Printf("Converting type of field '%s' measurement '%s' from '%s' to '%s'", f, m, r.fromType, r.toType)
+					field.Type = r.toType
+				}
+			}
+
 		}
 
 		if !r.check {
@@ -122,32 +139,78 @@ func (r *UpdateFieldTypeRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *UpdateFieldTypeRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	series, _ := tsm1.SeriesAndFieldFromCompositeKey(key)
+	series, field := tsm1.SeriesAndFieldFromCompositeKey(key)
 	measurement, _ := models.ParseKey(series)
 
-	if measurement != r.measurement {
-		return key, values, nil
-	}
+	if r.measurementFilter.Filter([]byte(measurement)) && r.fieldFilter.Filter(field) {
+		var newValues []tsm1.Value
 
-	var newValues []tsm1.Value
-
-	count := 0
-
-	for _, value := range values {
-		v, ok, err := EnsureValueType(value, r.toType)
-		if err != nil {
+		if influxType, err := tsm1.Values(values).InfluxQLType(); err != nil {
 			return nil, nil, err
+		} else if influxType != r.fromType || influxType == r.toType {
+			newValues = values
+		} else {
+			for _, value := range values {
+				v, ok, err := EnsureValueType(value, r.toType)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				if !ok {
+					r.logger.Printf("Converting value to type '%s' for field '%s' of measurement '%s'", r.toType, field, measurement)
+					fieldString := string(field)
+					if updates, ok := r.updates[measurement]; !ok {
+						r.updates[measurement] = append(r.updates[measurement], fieldString)
+					} else {
+						found := false
+						for _, f := range updates {
+							if f == fieldString {
+								found = true
+								break
+							}
+						}
+
+						if !found {
+							r.updates[measurement] = append(r.updates[measurement], fieldString)
+						}
+					}
+				}
+
+				newValues = append(newValues, v)
+			}
 		}
 
-		if !ok {
-			count++
-		}
-
-		newValues = append(newValues, v)
+		return key, newValues, nil
 	}
 
-	r.logger.Printf("Converting '%d' values to type '%s' for field '%s' of measurement '%s'", count, r.toType, r.fieldKey, measurement)
-	return key, newValues, nil
+	return key, values, nil
+}
+
+// Sample implements Config interface
+func (c *UpdateFieldTypeRuleConfig) Sample() string {
+	return `
+		 fromType="float"
+		 toType="integer"
+		 [measurement.strings]
+			equal="cpu"
+		 [field.pattern]
+		 	pattern="^(idle|active)"
+	`
+}
+
+// Build implements Config interface
+func (c *UpdateFieldTypeRuleConfig) Build() (Rule, error) {
+	fromType := influxql.DataTypeFromString(c.FromType)
+	if fromType == influxql.Unknown {
+		return nil, fmt.Errorf("Unknown FromType '%s'", c.FromType)
+	}
+
+	toType := influxql.DataTypeFromString(c.ToType)
+	if toType == influxql.Unknown {
+		return nil, fmt.Errorf("Unknown ToType '%s'", c.ToType)
+	}
+
+	return NewUpdateFieldType(c.Measurement, c.Field, fromType, toType), nil
 }
 
 // EnsureValueType casts a Value to a given data type
