@@ -155,8 +155,8 @@ Usage: infix [options]
         The database to fix
     -retention
         The retention policy to fix
-	-shard
-	    The id of the shard to fix
+    -shard
+        The id of the shard to fix
     -max-cache-size
         The maximum in-memory cache size in bytes (defaults to %s)
     -cache-snapshot-size
