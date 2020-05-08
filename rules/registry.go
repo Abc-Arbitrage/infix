@@ -20,6 +20,9 @@ func init() {
 	RegisterRule("rename-field", func() Config {
 		return &RenameFieldRuleConfig{}
 	})
+	RegisterRule("update-field-type", func() Config {
+		return &UpdateFieldTypeRuleConfig{}
+	})
 }
 
 // NewRuleFunc represents a callback to register a rule's configuration to be able to load it from toml
