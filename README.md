@@ -43,10 +43,34 @@ Usage: infix [options]
         The configuration file
 ```
 
-Example: make sure to run infix with the same user that owns your TSM and WAL files !
+# Procedure
+
+* Stop InfluxDB
+
+Before running `infix`, stop your `influxd` process
 
 ```
-sudo -u influxdb ./infix -datadir /var/lib/influxdb/data -waldir /var/lib/influxdb/wal -database telegraf -v -config rules.toml
+sudo systemctl stop influxdb
+```
+
+* Run infix
+
+Make sure to run `infix` with the appropriate user that owns your your TSM and WAL files.
+
+```
+sudo -u influxdb infix -datadir /var/lib/influxdb/data /var/lib/influxdb/wal -database telegraf -v -config rules.toml
+```
+
+* Optional: rebuild the TSI index
+
+If you configured `infix` to drop or rename measurements or series, make sure to rebuild your [TSI index](https://docs.influxdata.com/influxdb/v1.8/administration/rebuild-tsi-index/#sidebar) if you are using the `tsi1` index type.
+
+* Restart InfluxDB
+
+Restart InfluxDB by starting the `influxd` process
+
+```
+sudo systemctl start influxdb
 ```
 
 # Configuration
@@ -184,3 +208,36 @@ Note that functions are chained together with a `or`. The given configuration th
 ```
 strings.HasPrefix(key, "linux.") || strings.HasSuffix(key, ".gauge")
 ```
+
+## SerieFilter
+
+This filter should be used with rules that act on series like `DropSerie`. This filter builds on 3 underlying filters:
+
+* Measurement to filter the measurement
+* Tag to filter tags
+* Field to filter fields
+
+**Measurement** and **Tag** filters are mandatory. **Field** filter is optional. If none, all fields will pass the filter.
+
+```
+    [measurement.strings]
+        equal="cpu"
+    [tag.where]
+        cpu="cpu0"
+    [field.pattern]
+        pattern="^(idle|usage_idle)$"
+```
+
+will filter series from measurement `cpu` (`StringFilter`) with tag `cpu` matching value `cpu0` having fields `idle` or `usage_idle`.
+
+## WhereFilter
+
+This filter is a special filter that can be used to filter tags and their corresponding values. It can be used in `SerieFilter` to filter tags.
+
+```
+    cpu="^(cpu0|cpu1)$"
+    host="my-host"
+```
+
+will filter tag `cpu` matching pattern `^(cpu0|cpu1)$` and `host` matching `my-host`.
+Note that tag values can use patterns.
