@@ -4,14 +4,37 @@ import (
 	"errors"
 
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+	"github.com/oktal/infix/filter"
 	"github.com/oktal/infix/storage"
 )
 
 // RenameFn defines a function to rename a measurement or field
 type RenameFn func(string) string
 
+// RenameFnFromFilter returns a RenameFn that expands captured variables from a pattern if the given filter is a PatternFilter
+func RenameFnFromFilter(f filter.Filter, to string) RenameFn {
+	patternFilter, ok := f.(*filter.PatternFilter)
+
+	var renameFn RenameFn
+
+	if ok {
+		renameFn = func(name string) string {
+			return string(patternFilter.Pattern.ReplaceAll([]byte(name), []byte(to)))
+		}
+	} else {
+		renameFn = func(name string) string {
+			return to
+		}
+	}
+
+	return renameFn
+}
+
 // ErrMissingMeasurementFilter is raised when a config is missing a measurement filter
 var ErrMissingMeasurementFilter = errors.New("missing measurement filter")
+
+// ErrMissingTagFilter is raised when a config is missing a tag filter
+var ErrMissingTagFilter = errors.New("missing tag filter")
 
 // ErrMissingFieldFilter is raised when a config is missing a field filter
 var ErrMissingFieldFilter = errors.New("missing field filter")

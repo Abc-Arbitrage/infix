@@ -145,6 +145,21 @@ will rename fields matching the pattern `(.+)_(avg_sum)` from measurements start
 Note that if the field's filter is a `pattern` filter, the `to` can contains variables to replace matches of the regexp,
 expanded by golang's [Regexp.ReplaceAll](https://golang.org/pkg/regexp/#Regexp.ReplaceAll) function
 
+## RenameTag Rule
+
+This rules renames a tag from a given measurement
+
+```
+[[rules.rename-tag]]
+    to="hostname"
+    [measurement.strings]
+        hasprefix="linux."
+    [tag.strings]
+        equal="host"
+```
+
+will rename tag `host` from measurements starting with the prefix `linux.` to `hostname`
+
 ## UpdateFieldType Rule
 
 This rule updates the type of a field from a given measurement
