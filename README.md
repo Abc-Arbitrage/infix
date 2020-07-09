@@ -160,6 +160,19 @@ This rules renames a tag from a given measurement
 
 will rename tag `host` from measurements starting with the prefix `linux.` to `hostname`
 
+## RenameMeasurement Rule
+
+This rules renames a measurement
+
+```
+[[rules.rename-measurement]]
+    to="os"
+    [rules.rename-measurement.from.pattern]
+      pattern="^operating-system$"
+```
+
+will rename measurement `operating-system` to `os`.
+
 ## UpdateFieldType Rule
 
 This rule updates the type of a field from a given measurement
