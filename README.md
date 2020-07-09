@@ -16,6 +16,17 @@ To install Infix, run `go get`
 go get -u github.com/Abc-Arbitrage/infix/command
 ```
 
+# Compile
+
+You need golang >= 1.14
+```
+# Checkout Abc-Arbitrage/infix into your golang src directory:
+cd golang/src/github.com/Abc-Arbitrage/infix/command
+# Install package manager dep
+dep ensure
+go build -o infix
+```
+
 # Usage
 
 ```
