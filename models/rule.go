@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/oktal/infix/filter"
-	"github.com/oktal/infix/rules"
+	"github.com/Abc-Arbitrage/infix/filter"
+	"github.com/Abc-Arbitrage/infix/rules"
 )
 
 // Rule represents a Rule with a potential filter

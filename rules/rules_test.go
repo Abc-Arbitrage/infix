@@ -6,8 +6,8 @@ import (
 	"github.com/influxdata/influxdb/tsdb"
 	"github.com/influxdata/influxql"
 	"github.com/naoina/toml"
-	"github.com/oktal/infix/filter"
-	"github.com/oktal/infix/storage"
+	"github.com/Abc-Arbitrage/infix/filter"
+	"github.com/Abc-Arbitrage/infix/storage"
 	"github.com/stretchr/testify/assert"
 )
 

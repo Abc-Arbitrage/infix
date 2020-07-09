@@ -3,12 +3,12 @@ package rules
 import (
 	"log"
 
-	"github.com/oktal/infix/logging"
+	"github.com/Abc-Arbitrage/infix/logging"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 
-	"github.com/oktal/infix/storage"
+	"github.com/Abc-Arbitrage/infix/storage"
 )
 
 // UpdateTagValueRule defines a rule to update the value of a tag for a given measurement
