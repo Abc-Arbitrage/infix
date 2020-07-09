@@ -10,9 +10,9 @@ import (
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/influxdata/influxql"
 
-	"github.com/oktal/infix/filter"
-	"github.com/oktal/infix/logging"
-	"github.com/oktal/infix/storage"
+	"github.com/Abc-Arbitrage/infix/filter"
+	"github.com/Abc-Arbitrage/infix/logging"
+	"github.com/Abc-Arbitrage/infix/storage"
 )
 
 // ErrUnknownType is raised when failing to parse an InfluxQL Type

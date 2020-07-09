@@ -3,13 +3,13 @@ package rules
 import (
 	"log"
 
-	"github.com/oktal/infix/filter"
-	"github.com/oktal/infix/logging"
+	"github.com/Abc-Arbitrage/infix/filter"
+	"github.com/Abc-Arbitrage/infix/logging"
 
 	"github.com/influxdata/influxdb/models"
 
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
-	"github.com/oktal/infix/storage"
+	"github.com/Abc-Arbitrage/infix/storage"
 )
 
 // DropSerieRule defines a rule to drop series

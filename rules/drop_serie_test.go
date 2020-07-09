@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 
-	"github.com/oktal/infix/filter"
+	"github.com/Abc-Arbitrage/infix/filter"
 	"github.com/stretchr/testify/assert"
 )
 

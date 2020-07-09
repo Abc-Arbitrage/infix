@@ -6,7 +6,7 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
-	"github.com/oktal/infix/filter"
+	"github.com/Abc-Arbitrage/infix/filter"
 )
 
 // Config represents a configuration for a rule
