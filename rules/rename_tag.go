@@ -124,9 +124,9 @@ func (r *RenameTagRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 func (c *RenameTagRuleConfig) Sample() string {
 	return `
 	to="hostname"
-	[measurement.strings]
+	[rules.rename-tag.measurement.strings]
 		hasprefix="linux."
-	[tag.strings]
+	[rules.rename-tag.tag.strings]
 		equal="host"
 	`
 }

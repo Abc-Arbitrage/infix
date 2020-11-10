@@ -163,9 +163,9 @@ This rules renames a tag from a given measurement
 ```
 [[rules.rename-tag]]
     to="hostname"
-    [measurement.strings]
+    [rules.rename-tag.measurement.strings]
         hasprefix="linux."
-    [tag.strings]
+    [rules.rename-tag.tag.strings]
         equal="host"
 ```
 
