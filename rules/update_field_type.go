@@ -46,7 +46,7 @@ type UpdateFieldTypeRuleConfig struct {
 // NewUpdateFieldType creates an UpdateFieldTypeRule
 func NewUpdateFieldType(measurementFilter filter.Filter, fieldFilter filter.Filter, fromType influxql.DataType, toType influxql.DataType) *UpdateFieldTypeRule {
 	return &UpdateFieldTypeRule{
-		measurementFilter: measurementFilter,
+		measurementFilter: filter.NewMeasurementFilter(measurementFilter),
 		fieldFilter:       fieldFilter,
 		fromType:          fromType,
 		toType:            toType,
@@ -68,6 +68,11 @@ func (r *UpdateFieldTypeRule) Flags() int {
 // WithLogger sets the logger on the rule
 func (r *UpdateFieldTypeRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
+}
+
+// FilterKey implements Rule interface
+func (r *UpdateFieldTypeRule) FilterKey(key []byte) bool {
+	return r.measurementFilter.Filter(key)
 }
 
 // Start implements Rule interface
@@ -144,9 +149,8 @@ func (r *UpdateFieldTypeRule) EndWAL() {
 // Apply implements Rule interface
 func (r *UpdateFieldTypeRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
 	series, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, _ := models.ParseKey(series)
-
-	if r.measurementFilter.Filter([]byte(measurement)) && r.fieldFilter.Filter(field) {
+	if r.measurementFilter.Filter(key) && r.fieldFilter.Filter(field) {
+		measurement, _ := models.ParseKey(series)
 		var newValues []tsm1.Value
 
 		if influxType, err := tsm1.Values(values).InfluxQLType(); err != nil {

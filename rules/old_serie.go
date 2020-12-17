@@ -27,7 +27,7 @@ type textFormater struct {
 
 func formatTimestamp(unixNano int64, layout string) string {
 	if layout == "" {
-		return string(unixNano)
+		return fmt.Sprint(unixNano)
 	}
 
 	ts := time.Unix(0, unixNano)
@@ -148,6 +148,11 @@ func (r *OldSerieRule) Flags() int {
 // WithLogger sets the logger on the rule
 func (r *OldSerieRule) WithLogger(logger *log.Logger) {
 
+}
+
+// FilterKey implements Rule interface
+func (r *OldSerieRule) FilterKey(key []byte) bool {
+	return false
 }
 
 // Start implements Rule interface

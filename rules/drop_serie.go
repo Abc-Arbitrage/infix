@@ -54,6 +54,11 @@ func (r *DropSerieRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
 }
 
+// FilterKey implements Rule interface
+func (r *DropSerieRule) FilterKey(key []byte) bool {
+	return r.dropFilter.Filter(key)
+}
+
 // Start implements Rule interface
 func (r *DropSerieRule) Start() {
 }

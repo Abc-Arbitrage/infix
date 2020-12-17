@@ -62,6 +62,8 @@ type Rule interface {
 	CheckMode(check bool)
 	Flags() int
 
+	FilterKey(key []byte) bool
+
 	Start()
 	End()
 

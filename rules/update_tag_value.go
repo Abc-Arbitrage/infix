@@ -12,6 +12,7 @@ import (
 )
 
 // UpdateTagValueRule defines a rule to update the value of a tag for a given measurement
+// TODO: use filters for measurement and tag
 type UpdateTagValueRule struct {
 	measurement string
 	tagKey      string
@@ -47,6 +48,11 @@ func (r *UpdateTagValueRule) Flags() int {
 // WithLogger sets the logger on the rule
 func (r *UpdateTagValueRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
+}
+
+// FilterKey implements Rule interface
+func (r *UpdateTagValueRule) FilterKey(key []byte) bool {
+	return false
 }
 
 // Start implements Rule interface

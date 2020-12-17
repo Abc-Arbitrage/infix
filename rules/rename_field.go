@@ -40,10 +40,10 @@ type RenameFieldRuleConfig struct {
 }
 
 // NewRenameField creates a new RenameFiled rule with given measurement and filter filters, will renamed fields according to renameFn
-func NewRenameField(measurement filter.Filter, field filter.Filter, renameFn RenameFn) *RenameFieldRule {
+func NewRenameField(measurementFilter filter.Filter, fieldFilter filter.Filter, renameFn RenameFn) *RenameFieldRule {
 	return &RenameFieldRule{
-		measurementFilter: measurement,
-		fieldFilter:       field,
+		measurementFilter: filter.NewMeasurementFilter(measurementFilter),
+		fieldFilter:       fieldFilter,
 		renamed:           make(map[string][]fieldRename),
 		renameFn:          renameFn,
 		logger:            logging.GetLogger("RenameFieldRule"),
@@ -63,6 +63,11 @@ func (r *RenameFieldRule) Flags() int {
 // WithLogger sets the logger on the rule
 func (r *RenameFieldRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
+}
+
+// FilterKey implements Rule interface
+func (r *RenameFieldRule) FilterKey(key []byte) bool {
+	return r.measurementFilter.Filter(key)
 }
 
 // Start implements Rule interface
@@ -154,9 +159,9 @@ func (r *RenameFieldRule) EndWAL() {
 // Apply implements Rule interface
 func (r *RenameFieldRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
 	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, _ := models.ParseKey(seriesKey)
+	if r.measurementFilter.Filter(key) && r.fieldFilter.Filter(field) {
+		measurement, _ := models.ParseKey(seriesKey)
 
-	if r.measurementFilter.Filter([]byte(measurement)) && r.fieldFilter.Filter(field) {
 		newField := r.renameFn(string(field))
 		r.logger.Printf("Renaming field '%s' to '%s' for measurement %s", field, newField, measurement)
 		rename := fieldRename{oldKey: string(field), newKey: newField}

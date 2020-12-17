@@ -33,7 +33,7 @@ type RenameTagRuleConfig struct {
 // NewRenameTagRule creates a new RenameTagRule
 func NewRenameTagRule(measurementFilter filter.Filter, tagFilter filter.Filter, renameFn RenameFn) *RenameTagRule {
 	return &RenameTagRule{
-		measurementFilter: measurementFilter,
+		measurementFilter: filter.NewMeasurementFilter(measurementFilter),
 		tagFilter:         tagFilter,
 		check:             false,
 		renameFn:          renameFn,
@@ -54,6 +54,11 @@ func (r *RenameTagRule) Flags() int {
 // WithLogger implements Rule interface
 func (r *RenameTagRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
+}
+
+// FilterKey implements Rule interface
+func (r *RenameTagRule) FilterKey(key []byte) bool {
+	return r.measurementFilter.Filter(key)
 }
 
 // Start implements Rule interface
@@ -96,10 +101,9 @@ func (r *RenameTagRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *RenameTagRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, tags := models.ParseKey(seriesKey)
-
-	if r.measurementFilter.Filter([]byte(measurement)) {
+	if r.measurementFilter.Filter(key) {
+		seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
+		measurement, tags := models.ParseKey(seriesKey)
 		var newTags models.Tags
 
 		for _, t := range tags {
@@ -124,9 +128,9 @@ func (r *RenameTagRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 func (c *RenameTagRuleConfig) Sample() string {
 	return `
 	to="hostname"
-	[rules.rename-tag.measurement.strings]
+	[measurement.strings]
 		hasprefix="linux."
-	[rules.rename-tag.tag.strings]
+	[tag.strings]
 		equal="host"
 	`
 }

@@ -69,6 +69,11 @@ func (r *DropMeasurementRule) WithLogger(logger *log.Logger) {
 	r.logger = logger
 }
 
+// FilterKey implements Rule interface
+func (r *DropMeasurementRule) FilterKey(key []byte) bool {
+	return r.filter.Filter(key)
+}
+
 // Start implements Rule interface
 func (r *DropMeasurementRule) Start() {
 
