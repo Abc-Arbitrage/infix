@@ -22,6 +22,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/influxdata/influxdb/tsdb"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 var (
@@ -267,15 +269,30 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		return err
 	}
 
-	log.Printf("%d total keys", r.KeyCount())
+	keyCount := r.KeyCount()
+
+	log.Printf("%d total keys", keyCount)
 	filtered := 0
 
 	readRules := cmd.filterFlaggedRules(rs, rules.TSMReadOnly)
 	writeRules := cmd.filterFlaggedRules(rs, rules.TSMWriteOnly)
 
-	for i := 0; i < r.KeyCount(); i++ {
+	progress := progressbar.Default(int64(keyCount))
+
+	for i := 0; i < keyCount; i++ {
 		key, _ := r.KeyAt(i)
+
+		progress.Add(1)
+
 		if cmd.filter.Filter(key) {
+			filtered++
+			continue
+		}
+
+		readRules := cmd.filterRulesMatchingKey(readRules, key)
+		writeRules := cmd.filterRulesMatchingKey(writeRules, key)
+
+		if len(readRules) == 0 && len(writeRules) == 0 {
 			filtered++
 			continue
 		}
@@ -334,7 +351,7 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		}
 	}
 
-	log.Printf("%d total filtered keys", filtered)
+	log.Printf("%d (%d) total filtered keys", filtered, (filtered*100)/keyCount)
 
 	if err := w.Close(); err != nil {
 		return err
@@ -522,6 +539,12 @@ func (cmd *Command) createWALWriter(rs []rules.Rule, walFilePath string) (*tsm1.
 	w := tsm1.NewWALSegmentWriter(output)
 
 	return w, output, outputPath, nil
+}
+
+func (cmd *Command) filterRulesMatchingKey(rs []rules.Rule, key []byte) []rules.Rule {
+	return cmd.filterRules(rs, func(r rules.Rule) bool {
+		return r.FilterKey(key)
+	})
 }
 
 func (cmd *Command) filterFlaggedRules(rs []rules.Rule, flags int) []rules.Rule {
