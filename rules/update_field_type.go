@@ -254,7 +254,8 @@ func castToFloat(value tsm1.Value) (tsm1.Value, bool, error) {
 	case uint64:
 		return tsm1.NewFloatValue(value.UnixNano(), float64(value.Value().(uint64))), false, nil
 	case bool:
-		return nil, false, fmt.Errorf("Could not cast bool value to float")
+		b := value.Value().(bool)
+		return tsm1.NewFloatValue(value.UnixNano(), float64(btoi(b))), false, nil
 	case string:
 		v, err := strconv.ParseFloat(value.Value().(string), 64)
 		if err != nil {
