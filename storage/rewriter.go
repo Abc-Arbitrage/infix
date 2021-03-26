@@ -30,7 +30,7 @@ type CachedTSMRewriter struct {
 
 // NewCachedTSMRewriter creates a new CacheRewriter with a maximum size in bytes
 func NewCachedTSMRewriter(maxSize uint64, flushSizeThrehsold uint64, path string) *CachedTSMRewriter {
-	cache := tsm1.NewCache(maxSize, "")
+	cache := tsm1.NewCache(maxSize)
 
 	fs := tsm1.NewFileStore(path)
 

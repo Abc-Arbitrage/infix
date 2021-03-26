@@ -149,6 +149,22 @@
   version = "v0.0.12"
 
 [[projects]]
+  digest = "1:48a6af8193acef33a5e96299a9f14822c74ad1c50c3f8aed2467f87e6056d4c9"
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "59616a248b91ae20bf3eb93636a24c87d9ce6cea"
+  version = "v0.0.10"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f7fe69581040ed4bb2d5444e3b53088f5c458e2e242e0ae44bd90bc3aa019462"
+  name = "github.com/mitchellh/colorstring"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d06e56a500db4d08c33db0b79461e7c9beafca2d"
+
+[[projects]]
   branch = "master"
   digest = "1:c22fdadfe2de0e1df75987cac34f1c721157dc24f180c76b4ef66a3c9637a799"
   name = "github.com/mschoch/smat"
@@ -190,6 +206,22 @@
   pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:034d31b31cdbbba45de1a14367c75ce3195d7ae908514b8d6142d1525c41955b"
+  name = "github.com/rivo/uniseg"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "75711fccf6a3e85bc74c241e2dddd06a9bc9e53d"
+  version = "v0.2.0"
+
+[[projects]]
+  digest = "1:e810ee2ffdcba27559a9ab1cccfdf46d4d8a3352b7b033dda2df39fc428f2836"
+  name = "github.com/schollz/progressbar"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3e6b9bf007862f9acf97b7cdc2dc2c8f6683f110"
+  version = "v3.7.6"
 
 [[projects]]
   digest = "1:5e8f46b412421d2d6cceea845d28ac46f3f5a5f60a6e86f0ee75e24fd43a02a9"
@@ -256,6 +288,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:c9d0c7346c55bc13efdb3dbf13938e909d22a7a7bf115af69a79e25553513bd0"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  pruneopts = "UT"
+  revision = "0c34fe9e7dc2486962ef9867e3edb3503537209f"
+
+[[projects]]
+  branch = "master"
   digest = "1:b521f10a2d8fa85c04a8ef4e62f2d1e14d303599a55d64dabf9f5a02f84d35eb"
   name = "golang.org/x/sync"
   packages = ["errgroup"]
@@ -264,11 +304,23 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:842f1500cf319662226ee2f897aa1bf5e9228bb851af8a9aaef5c425fe90f14e"
+  digest = "1:2a6f37fabf6ebee21480312fcd96f13ac0119a60f0ef1afefa7ebde101515194"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "plan9",
+    "unix",
+    "windows",
+  ]
   pruneopts = "UT"
   revision = "c3d80250170dec19bf61949c81233cede5ddaf61"
+
+[[projects]]
+  branch = "master"
+  digest = "1:bc88168d601da654e2dd99fb8333dd53771e70ecf9854e7bd601c96604c6eeb7"
+  name = "golang.org/x/term"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "de623e64d2a6562fa463152da80477d4aa07fca0"
 
 [[projects]]
   branch = "master"
@@ -297,6 +349,8 @@
     "github.com/influxdata/influxdb/tsdb/engine/tsm1",
     "github.com/influxdata/influxql",
     "github.com/naoina/toml",
+    "github.com/naoina/toml/ast",
+    "github.com/schollz/progressbar",
     "github.com/stretchr/testify/assert",
   ]
   solver-name = "gps-cdcl"

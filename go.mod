@@ -13,8 +13,8 @@ require (
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.2 // indirect
-	github.com/influxdata/influxdb v1.5.5
-	github.com/influxdata/influxql v1.1.0
+	github.com/influxdata/influxdb v1.8.4
+	github.com/influxdata/influxql v1.1.1-0.20200828144457-65d3ef77d385
 	github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368 // indirect
 	github.com/influxdata/yamux v0.0.0-20171107173414-1f58ded512de // indirect
 	github.com/influxdata/yarpc v0.0.1 // indirect
@@ -26,7 +26,7 @@ require (
 	github.com/naoina/toml v0.1.1
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/prometheus/client_golang v1.8.0 // indirect
-	github.com/schollz/progressbar/v3 v3.7.2
+	github.com/schollz/progressbar/v3 v3.7.6
 	github.com/stretchr/testify v1.5.1
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/xlab/treeprint v1.0.0 // indirect
