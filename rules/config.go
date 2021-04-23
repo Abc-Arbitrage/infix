@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/Abc-Arbitrage/infix/filter"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
-	"github.com/Abc-Arbitrage/infix/filter"
 )
 
 // Config represents a configuration for a rule

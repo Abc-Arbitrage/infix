@@ -3,9 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/Abc-Arbitrage/infix/filter"
 	"github.com/Abc-Arbitrage/infix/storage"
+	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 )
 
 // RenameFn defines a function to rename a measurement or field

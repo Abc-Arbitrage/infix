@@ -24,9 +24,9 @@ func init() {
 	RegisterRule("rename-tag", func() Config {
 		return &RenameTagRuleConfig{}
 	})
-    RegisterRule("show-field-key-multiple-types", func() Config {
-        return &ShowFieldKeyMultipleTypesConfig{}
-    })
+	RegisterRule("show-field-key-multiple-types", func() Config {
+		return &ShowFieldKeyMultipleTypesConfig{}
+	})
 	RegisterRule("update-field-type", func() Config {
 		return &UpdateFieldTypeRuleConfig{}
 	})
@@ -57,9 +57,9 @@ func NewRule(name string) (Config, error) {
 
 // PrintList print a list of registered rules with a sample config
 func PrintList(out io.Writer) {
-    for rule, configFunc := range newRuleFuncs {
-        fmt.Fprintln(out, rule)
-        config := configFunc()
-        fmt.Fprintln(out, config.Sample())
-    }
+	for rule, configFunc := range newRuleFuncs {
+		fmt.Fprintln(out, rule)
+		config := configFunc()
+		fmt.Fprintln(out, config.Sample())
+	}
 }

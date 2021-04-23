@@ -8,8 +8,8 @@ import (
 
 	"github.com/influxdata/influxdb/models"
 
-	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/Abc-Arbitrage/infix/storage"
+	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 )
 
 // DropSerieRule defines a rule to drop series

@@ -6,9 +6,9 @@ import (
 
 	"github.com/influxdata/influxql"
 
+	"github.com/Abc-Arbitrage/infix/filter"
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
-	"github.com/Abc-Arbitrage/infix/filter"
 
 	"github.com/stretchr/testify/assert"
 )

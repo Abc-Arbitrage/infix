@@ -186,7 +186,7 @@ Usage: infix [options]
 
 func (cmd *Command) process(shards []storage.ShardInfo) error {
 	for _, r := range cmd.rules {
-        log.Printf("Running rule %s", reflect.TypeOf(r))
+		log.Printf("Running rule %s", reflect.TypeOf(r))
 		r.CheckMode(cmd.check)
 		r.Start()
 	}

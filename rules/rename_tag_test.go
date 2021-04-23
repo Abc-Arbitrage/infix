@@ -3,8 +3,8 @@ package rules
 import (
 	"testing"
 
-	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/Abc-Arbitrage/infix/filter"
+	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 
 	"github.com/stretchr/testify/assert"
 )

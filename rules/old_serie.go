@@ -12,8 +12,8 @@ import (
 
 	"github.com/Abc-Arbitrage/infix/logging"
 
-	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 	"github.com/Abc-Arbitrage/infix/storage"
+	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
 )
 
 type formater interface {
