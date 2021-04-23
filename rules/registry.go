@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"io"
 )
 
 func init() {
@@ -23,6 +24,9 @@ func init() {
 	RegisterRule("rename-tag", func() Config {
 		return &RenameTagRuleConfig{}
 	})
+    RegisterRule("show-field-key-multiple-types", func() Config {
+        return &ShowFieldKeyMultipleTypesConfig{}
+    })
 	RegisterRule("update-field-type", func() Config {
 		return &UpdateFieldTypeRuleConfig{}
 	})
@@ -45,8 +49,17 @@ func RegisterRule(name string, fn NewRuleFunc) {
 func NewRule(name string) (Config, error) {
 	fn, ok := newRuleFuncs[name]
 	if !ok {
-		return nil, fmt.Errorf("No registered rule '%s'", name)
+		return nil, fmt.Errorf("no registered rule '%s'", name)
 	}
 
 	return fn(), nil
+}
+
+// PrintList print a list of registered rules with a sample config
+func PrintList(out io.Writer) {
+    for rule, configFunc := range newRuleFuncs {
+        fmt.Fprintln(out, rule)
+        config := configFunc()
+        fmt.Fprintln(out, config.Sample())
+    }
 }

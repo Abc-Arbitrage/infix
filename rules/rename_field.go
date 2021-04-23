@@ -191,11 +191,11 @@ func (r *RenameFieldRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1
 // Sample implements Config interface
 func (c *RenameFieldRuleConfig) Sample() string {
 	return `
-	to="agg_5m_${1}_${2}"
+    to="agg_5m_${1}_${2}"
     [measurement.strings]
         hasprefix="linux."
     [field.pattern]
-		pattern="(.+)_(avg|sum)"
+        pattern="(.+)_(avg|sum)"
 `
 }
 

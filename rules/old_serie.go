@@ -244,12 +244,12 @@ func (r *OldSerieRule) makeKey(key []byte) string {
 // Sample implements Config interface
 func (c *OldSerieRuleConfig) Sample() string {
 	return `
-		time="2020-01-01T00:08:00Z"
-		out="stdout"
-		#out="out_file.log"
-		format="text"
-		#format="json"
-		timestamp=true
+    time="2020-01-01T00:08:00Z"
+    out="stdout"
+    #out="out_file.log"
+    format="text"
+    #format="json"
+    timestamp=true
 	`
 }
 

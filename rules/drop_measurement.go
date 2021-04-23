@@ -153,8 +153,8 @@ func (r *DropMeasurementRule) Count() int {
 // Sample implements Config interface
 func (c *DropMeasurementRuleConfig) Sample() string {
 	return `
-	[dropFilter.strings]
-		hasprefix="linux."
+    [dropFilter.strings]
+        hasprefix="linux."
     `
 }
 

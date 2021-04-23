@@ -197,12 +197,12 @@ func (r *UpdateFieldTypeRule) Apply(key []byte, values []tsm1.Value) ([]byte, []
 // Sample implements Config interface
 func (c *UpdateFieldTypeRuleConfig) Sample() string {
 	return `
-		 fromType="float"
-		 toType="integer"
-		 [measurement.strings]
-			equal="cpu"
-		 [field.pattern]
-		 	pattern="^(idle|active)"
+    fromType="float"
+    toType="integer"
+    [measurement.strings]
+        equal="cpu"
+    [field.pattern]
+        pattern="^(idle|active)"
 	`
 }
 
@@ -241,7 +241,7 @@ func EnsureValueType(value tsm1.Value, expectedType influxql.DataType) (tsm1.Val
 	case influxql.String:
 		return castToString(value)
 	default:
-		return nil, false, fmt.Errorf("Invalid cast for data type '%s'", expectedType)
+		return nil, false, fmt.Errorf("invalid cast for data type '%s'", expectedType)
 	}
 }
 
@@ -254,7 +254,7 @@ func castToFloat(value tsm1.Value) (tsm1.Value, bool, error) {
 	case uint64:
 		return tsm1.NewFloatValue(value.UnixNano(), float64(value.Value().(uint64))), false, nil
 	case bool:
-		return nil, false, fmt.Errorf("Could not cast bool value to float")
+		return nil, false, fmt.Errorf("could not cast bool value to float")
 	case string:
 		v, err := strconv.ParseFloat(value.Value().(string), 64)
 		if err != nil {
@@ -263,7 +263,7 @@ func castToFloat(value tsm1.Value) (tsm1.Value, bool, error) {
 
 		return tsm1.NewFloatValue(value.UnixNano(), v), false, nil
 	default:
-		return nil, false, fmt.Errorf("Unknown value type")
+		return nil, false, fmt.Errorf("unknown value type")
 	}
 }
 
@@ -286,7 +286,7 @@ func castToInteger(value tsm1.Value) (tsm1.Value, bool, error) {
 
 		return tsm1.NewIntegerValue(value.UnixNano(), v), false, nil
 	default:
-		return nil, false, fmt.Errorf("Unknown value type")
+		return nil, false, fmt.Errorf("unknown value type")
 	}
 }
 
@@ -318,7 +318,7 @@ func castToBoolean(value tsm1.Value) (tsm1.Value, bool, error) {
 
 		return tsm1.NewBooleanValue(value.UnixNano(), v), false, nil
 	default:
-		return nil, false, fmt.Errorf("Unknown value type")
+		return nil, false, fmt.Errorf("unknown value type")
 	}
 }
 
@@ -339,6 +339,6 @@ func castToString(value tsm1.Value) (tsm1.Value, bool, error) {
 	case string:
 		return value, true, nil
 	default:
-		return nil, false, fmt.Errorf("Unknown value type")
+		return nil, false, fmt.Errorf("unknown value type")
 	}
 }

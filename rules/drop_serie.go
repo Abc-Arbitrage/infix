@@ -126,14 +126,13 @@ func (r *DropSerieRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.V
 // Sample implements the Config interface
 func (c *DropSerieRuleConfig) Sample() string {
 	return `
-		[dropFilter.serie]
-			[dropFilter.serie.measurement.strings]
-				equal="cpu"
-			[dropFilter.serie.tag.where]
-				cpu="cpu0"
-			[dropFilter.serie.field.pattern]
-				pattern="^(idle|usage_idle)$"
-			        
+    [dropFilter.serie]
+        [dropFilter.serie.measurement.strings]
+            equal="cpu"
+        [dropFilter.serie.tag.where]
+            cpu="cpu0"
+        [dropFilter.serie.field.pattern]
+            pattern="^(idle|usage_idle)$"
 	`
 }
 

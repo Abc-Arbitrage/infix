@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -47,8 +48,9 @@ type Command struct {
 	maxCacheSize      bytesize.Flag
 	cacheSnapshotSize bytesize.Flag
 
-	verbose bool
-	check   bool
+	listRules bool
+	verbose   bool
+	check     bool
 
 	shards []storage.ShardInfo
 
@@ -94,6 +96,7 @@ func (cmd *Command) Run(args ...string) error {
 	fs.Var(&cmd.maxCacheSize, "max-cache-size", "The maximum in-memory cache size")
 	fs.Var(&cmd.cacheSnapshotSize, "cache-snapshot-size", "The size after which the cache will be snapshotted to disk when re-writing TSM files.")
 	fs.StringVar(&cmd.config, "config", "", "The configuration file for rules")
+	fs.BoolVar(&cmd.listRules, "list-rules", false, "Print a list of registered rules with sample config and exit")
 	fs.BoolVar(&cmd.verbose, "v", false, "Enable verbose logging")
 	fs.BoolVar(&cmd.check, "check", false, "Run in check mode")
 
@@ -106,6 +109,11 @@ func (cmd *Command) Run(args ...string) error {
 
 	if !cmd.verbose {
 		log.SetOutput(ioutil.Discard)
+	}
+
+	if cmd.listRules {
+		rules.PrintList(cmd.Stdout)
+		return nil
 	}
 
 	if cmd.check {
@@ -163,6 +171,8 @@ Usage: infix [options]
         The maximum in-memory cache size in bytes (defaults to %s)
     -cache-snapshot-size
         The size in bytes after which the cache will be snapshotted to disk when re-writing TSM files (defaults to %s)
+    -list-rules
+        Print a list of registered rules with sample config and exit
     -v
         Enable verbose logging
     -check
@@ -176,6 +186,7 @@ Usage: infix [options]
 
 func (cmd *Command) process(shards []storage.ShardInfo) error {
 	for _, r := range cmd.rules {
+        log.Printf("Running rule %s", reflect.TypeOf(r))
 		r.CheckMode(cmd.check)
 		r.Start()
 	}
@@ -351,7 +362,7 @@ func (cmd *Command) processTSMFile(info storage.ShardInfo, tsmFilePath string) e
 		}
 	}
 
-	log.Printf("%d (%d) total filtered keys", filtered, (filtered*100)/keyCount)
+	log.Printf("%d (%d%%) total filtered keys", filtered, (filtered*100)/keyCount)
 
 	if err := w.Close(); err != nil {
 		return err
