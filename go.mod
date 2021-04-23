@@ -12,7 +12,6 @@ require (
 	github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1
-	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/influxdata/influxdb v1.8.4
 	github.com/influxdata/influxql v1.1.1-0.20200828144457-65d3ef77d385
 	github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368 // indirect
@@ -31,5 +30,5 @@ require (
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/xlab/treeprint v1.0.0 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
+	golang.org/x/tools/gopls v0.6.10 // indirect
 )

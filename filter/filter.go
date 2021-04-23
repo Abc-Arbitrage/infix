@@ -132,14 +132,24 @@ func (f *ExcludeFilter) Filter(key []byte) bool {
 	return true
 }
 
-// PassFilter is a Filter that always pass
-type PassFilter struct {
+// AlwaysTrueFilter is a Filter that is always true
+type AlwaysTrueFilter struct {
 }
 
 // Filter implements Filter interface
-func (f *PassFilter) Filter(key []byte) bool {
+func (f *AlwaysTrueFilter) Filter(key []byte) bool {
+	return true
+}
+
+// AlwaysFalseFilter is a Filter that is always false
+type AlwaysFalseFilter struct {
+}
+
+// Filter implements Filter interface
+func (f *AlwaysFalseFilter) Filter(key []byte) bool {
 	return false
 }
+
 
 // FuncFilter is a filter based on a filtering function
 type FuncFilter struct {

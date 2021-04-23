@@ -61,7 +61,7 @@ func NewCommand() *Command {
 	return &Command{
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
-		filter: &filter.PassFilter{},
+		filter: &filter.AlwaysFalseFilter{},
 	}
 }
 
@@ -71,7 +71,7 @@ func NewCommandWithRules(rs rules.Set) *Command {
 		Stderr: os.Stderr,
 		Stdout: os.Stdout,
 		rules:  rs.Rules(),
-		filter: &filter.PassFilter{},
+		filter: &filter.AlwaysFalseFilter{},
 	}
 }
 
