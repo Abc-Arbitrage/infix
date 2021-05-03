@@ -34,11 +34,10 @@ func NewCachedTSMRewriter(maxSize uint64, flushSizeThrehsold uint64, path string
 
 	fs := tsm1.NewFileStore(path)
 
-	compactor := &tsm1.Compactor{
-		Dir:       path,
-		FileStore: fs,
-		RateLimit: limiter.NewRate(DefaultCompactThroughput, DefaultCompactThroughputBurst),
-	}
+	compactor := tsm1.NewCompactor()
+	compactor.Dir = path
+	compactor.FileStore = fs
+	compactor.RateLimit = limiter.NewRate(DefaultCompactThroughput, DefaultCompactThroughputBurst)
 	compactor.Open()
 
 	return &CachedTSMRewriter{
