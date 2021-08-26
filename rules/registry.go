@@ -12,6 +12,9 @@ func init() {
 	RegisterRule("drop-serie", func() Config {
 		return &DropSerieRuleConfig{}
 	})
+    RegisterRule("drop-field", func()  Config {
+        return &DropFieldRuleConfig{}
+    })
 	RegisterRule("old-serie", func() Config {
 		return &OldSerieRuleConfig{}
 	})
