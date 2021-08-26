@@ -76,7 +76,9 @@ func (r *DropSerieRule) StartShard(info storage.ShardInfo) bool {
 
 // EndShard implements Rule interface
 func (r *DropSerieRule) EndShard() error {
-	log.Printf("dropped %d (%d%%) total keys in current shard", r.shardCount, (r.shardCount*100)/r.shardTotal)
+    if r.shardTotal > 0 {
+        log.Printf("dropped %d (%d%%) total keys in current shard", r.shardCount, (r.shardCount*100)/r.shardTotal)
+    }
 	return nil
 }
 
@@ -91,7 +93,9 @@ func (r *DropSerieRule) StartTSM(path string) bool {
 func (r *DropSerieRule) EndTSM() {
 	r.shardCount += r.count
 	r.shardTotal += r.total
-	log.Printf("dropped %d (%d%%) total keys in current TSM", r.count, (r.count*100)/r.total)
+    if r.total > 0 {
+        log.Printf("dropped %d (%d%%) total keys in current TSM", r.count, (r.count*100)/r.total)
+    }
 }
 
 // StartWAL implements Rule interface
