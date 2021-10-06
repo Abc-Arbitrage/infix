@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"io"
+	"sort"
 )
 
 func init() {
@@ -63,9 +64,17 @@ func NewRule(name string) (Config, error) {
 
 // PrintList print a list of registered rules with a sample config
 func PrintList(out io.Writer) {
-	for rule, configFunc := range newRuleFuncs {
-		fmt.Fprintln(out, rule)
+	sortedKeys := make([]string, 0, len(newRuleFuncs))
+	for key := range newRuleFuncs {
+		sortedKeys = append(sortedKeys, key)
+	}
+
+	sort.Strings(sortedKeys)
+
+	for _, key := range sortedKeys {
+		configFunc := newRuleFuncs[key]
 		config := configFunc()
+		fmt.Fprintln(out, key)
 		fmt.Fprintln(out, config.Sample())
 	}
 }
