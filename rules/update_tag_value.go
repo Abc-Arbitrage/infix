@@ -3,6 +3,7 @@ package rules
 import (
 	"log"
 
+	"github.com/Abc-Arbitrage/infix/filter"
 	"github.com/Abc-Arbitrage/infix/logging"
 
 	"github.com/influxdata/influxdb/models"
@@ -12,26 +13,38 @@ import (
 )
 
 // UpdateTagValueRule defines a rule to update the value of a tag for a given measurement
-// TODO: use filters for measurement and tag
 type UpdateTagValueRule struct {
-	measurement string
-	tagKey      string
-	oldValue    string
-	newValue    string
+	measurementFilter filter.Filter
+
+	keyFilter   filter.Filter
+	valueFilter filter.Filter
+
+	renameFn RenameFn
 
 	check  bool
 	logger *log.Logger
 }
 
-// NewUpdateTagValue creates a new UpdateTagValueRule
-func NewUpdateTagValue(measurement string, tagKey string, oldValue string, newValue string) *UpdateTagValueRule {
+// UpdateTagValueRuleConfig represents the toml configuration of UpdateTagValue rule
+type UpdateTagValueRuleConfig struct {
+	Measurement filter.Filter
+	Key         filter.Filter
+	Value       filter.Filter
+	To          string
+}
+
+// NewUpdateTagValueRule creates a new UpdateTagValueRule
+func NewUpdateTagValueRule(measurementFilter filter.Filter, keyFilter filter.Filter, valueFilter filter.Filter, renameFn RenameFn) *UpdateTagValueRule {
 	return &UpdateTagValueRule{
-		measurement: measurement,
-		tagKey:      tagKey,
-		oldValue:    oldValue,
-		newValue:    newValue,
-		check:       false,
-		logger:      logging.GetLogger("UpdateTagValueRule"),
+		measurementFilter: measurementFilter,
+
+		keyFilter:   keyFilter,
+		valueFilter: valueFilter,
+
+		renameFn: renameFn,
+
+		check:  false,
+		logger: logging.GetLogger("UpdateTagValueRule"),
 	}
 }
 
@@ -95,30 +108,58 @@ func (r *UpdateTagValueRule) EndWAL() {
 
 // Apply implements Rule interface
 func (r *UpdateTagValueRule) Apply(key []byte, values []tsm1.Value) ([]byte, []tsm1.Value, error) {
-	seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
-	measurement, tags := models.ParseKey(seriesKey)
+	if r.measurementFilter.Filter(key) {
+		seriesKey, field := tsm1.SeriesAndFieldFromCompositeKey(key)
+		measurement, tags := models.ParseKey(seriesKey)
 
-	if measurement != r.measurement {
-		return key, values, nil
-	}
+		var newTags models.Tags
+		for _, tag := range tags {
+			newTag := tag.Clone()
+			if r.keyFilter.Filter(tag.Key) && r.valueFilter.Filter(tag.Value) {
+				newTagValue := r.renameFn(string(tag.Value))
+				r.logger.Printf("Updating tag for measurement '%s' %s=%s to %s=%s", measurement, tag.Key, tag.Value, tag.Key, newTagValue)
+				newTag.Value = []byte(newTagValue)
+			}
 
-	count := 0
-
-	var newTags []models.Tag
-	for _, tag := range tags {
-		if string(tag.Key) == r.tagKey && string(tag.Value) == r.oldValue {
-			tag.Value = []byte(r.newValue)
-			count++
+			newTags = append(newTags, newTag)
 		}
 
-		newTags = append(newTags, tag)
+		newKey := models.MakeKey([]byte(measurement), newTags)
+		newSeriesKey := tsm1.SeriesFieldKeyBytes(string(newKey), string(field))
+		return newSeriesKey, values, nil
 	}
 
-	if count > 0 {
-		r.logger.Printf("Updating tag for measurement '%s' %s=%s to %s=%s", r.measurement, r.tagKey, r.oldValue, r.tagKey, r.newValue)
+	return key, values, nil
+}
+
+// Sample implements Config interface
+func (c *UpdateTagValueRuleConfig) Sample() string {
+	return `
+	to="aws-$1"
+	[measurement.strings]
+	   hasprefix="linux."
+	[key.strings]
+	   equal="region"
+	[value.pattern]
+	  pattern="amazon-(.*)"
+	`
+}
+
+// Build implements Config interface
+func (c *UpdateTagValueRuleConfig) Build() (Rule, error) {
+	if c.To == "" {
+		return nil, ErrMissingRenameTo
+	}
+	if c.Measurement == nil {
+		return nil, ErrMissingMeasurementFilter
+	}
+	if c.Key == nil {
+		return nil, ErrMissingTagKeyFilter
+	}
+	if c.Value == nil {
+		return nil, ErrMissingTagValueFilter
 	}
 
-	newSeriesKey := models.MakeKey([]byte(measurement), newTags)
-	newKey := tsm1.SeriesFieldKeyBytes(string(newSeriesKey), string(field))
-	return newKey, values, nil
+	renameFn := RenameFnFromFilter(c.Value, c.To)
+	return NewUpdateTagValueRule(c.Measurement, c.Key, c.Value, renameFn), nil
 }

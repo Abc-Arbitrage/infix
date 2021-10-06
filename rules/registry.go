@@ -33,6 +33,9 @@ func init() {
 	RegisterRule("update-field-type", func() Config {
 		return &UpdateFieldTypeRuleConfig{}
 	})
+	RegisterRule("update-tag-value", func() Config {
+		return &UpdateTagValueRuleConfig{}
+	})
 }
 
 // NewRuleFunc represents a callback to register a rule's configuration to be able to load it from toml

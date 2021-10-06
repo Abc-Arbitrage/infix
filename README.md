@@ -179,7 +179,7 @@ This rules renames a measurement
 [[rules.rename-measurement]]
     to="os"
     [rules.rename-measurement.from.pattern]
-      pattern="^operating-system$"
+        pattern="^operating-system$"
 ```
 
 will rename measurement `operating-system` to `os`.
@@ -199,6 +199,23 @@ This rule updates the type of a field from a given measurement
 ```
 
 will update the type of fields `idle` and `active` from the measurement `cpu` from `float` to `integer`
+
+## UpdateTagValueRule
+
+This rule updates value of a tag from a given measurement
+
+```
+[[rules.update-tag-value]]
+	to="aws-$1"
+	[rules.update-tag.measurement.strings]
+	   hasprefix="linux."
+	[rules.update-tag.key.strings]
+	   equal="region"
+	[rules.update-tag.value.pattern]
+	  pattern="amazon-(.*)"
+```
+
+will update the value of tag `region` for measurements starting with prefix `linux.` from `amazon-(.*)` to `aws-$1` (using Go's [Regexp.ReplaceAll](https://pkg.go.dev/regexp#Regexp.ReplaceAll) function)
 
 # Filters
 

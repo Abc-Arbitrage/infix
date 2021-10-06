@@ -36,6 +36,12 @@ var ErrMissingMeasurementFilter = errors.New("missing measurement filter")
 // ErrMissingTagFilter is raised when a config is missing a tag filter
 var ErrMissingTagFilter = errors.New("missing tag filter")
 
+// ErrMissingTagKeyFilter is raised when a config is missing a tag key filter
+var ErrMissingTagKeyFilter = errors.New("missing tag key filter")
+
+// ErrMissingTagValueFilter is raised when a config is missing a tag value filter
+var ErrMissingTagValueFilter = errors.New("missing tag value filter")
+
 // ErrMissingFieldFilter is raised when a config is missing a field filter
 var ErrMissingFieldFilter = errors.New("missing field filter")
 
