@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/influxdb/pkg/limiter"
 	"github.com/influxdata/influxdb/tsdb/engine/tsm1"
+    "go.uber.org/zap"
 )
 
 // TSMRewriter defines a rewriter for a given TSM file
@@ -86,7 +87,7 @@ func (w *CachedTSMRewriter) WriteSnapshot() error {
 	}()
 
 	// write the snapshot files
-	newFiles, err := w.compactor.WriteSnapshot(snapshot)
+	newFiles, err := w.compactor.WriteSnapshot(snapshot, zap.NewNop())
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (w *CachedTSMRewriter) CompactFull() ([]string, error) {
 		return nil, nil
 	}
 
-	files, err := w.compactor.CompactFull(w.tsmFiles)
+	files, err := w.compactor.CompactFull(w.tsmFiles, zap.NewNop())
 	if err != nil {
 		return nil, err
 	}

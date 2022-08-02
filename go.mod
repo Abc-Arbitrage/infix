@@ -10,10 +10,9 @@ require (
 	github.com/dgryski/go-bits v0.0.0-20180113010104-bd8a69a71dc2 // indirect
 	github.com/dgryski/go-bitstream v0.0.0-20180413035011-3522498ce2c8 // indirect
 	github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/snappy v0.0.1
-	github.com/influxdata/influxdb v1.8.4
-	github.com/influxdata/influxql v1.1.1-0.20200828144457-65d3ef77d385
+	github.com/golang/snappy v0.0.4
+	github.com/influxdata/influxdb v1.9.8
+	github.com/influxdata/influxql v1.1.1-0.20211004132434-7e7d61973256
 	github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368 // indirect
 	github.com/influxdata/yamux v0.0.0-20171107173414-1f58ded512de // indirect
 	github.com/influxdata/yarpc v0.0.1 // indirect
@@ -26,9 +25,9 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/prometheus/client_golang v1.8.0 // indirect
 	github.com/schollz/progressbar/v3 v3.7.6
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/xlab/treeprint v1.0.0 // indirect
-	go.uber.org/zap v1.14.1 // indirect
+	go.uber.org/zap v1.16.0
 	golang.org/x/tools/gopls v0.6.10 // indirect
 )
