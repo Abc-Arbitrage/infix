@@ -207,11 +207,11 @@ This rule updates value of a tag from a given measurement
 ```
 [[rules.update-tag-value]]
 	to="aws-$1"
-	[rules.update-tag.measurement.strings]
+	[rules.update-tag-value.measurement.strings]
 	   hasprefix="linux."
-	[rules.update-tag.key.strings]
+	[rules.update-tag-value.key.strings]
 	   equal="region"
-	[rules.update-tag.value.pattern]
+	[rules.update-tag-value.value.pattern]
 	  pattern="amazon-(.*)"
 ```
 
