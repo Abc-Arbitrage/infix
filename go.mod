@@ -18,5 +18,5 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.22.0
 )
