@@ -14,7 +14,7 @@ require (
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/prometheus/client_golang v1.8.0 // indirect
-	github.com/schollz/progressbar/v3 v3.7.6
+	github.com/schollz/progressbar/v3 v3.12.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
