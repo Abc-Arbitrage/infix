@@ -15,8 +15,8 @@ require (
 	github.com/naoina/toml v0.1.1
 	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/schollz/progressbar/v3 v3.7.6
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.24.0
 )
